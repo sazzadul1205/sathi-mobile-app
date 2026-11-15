@@ -54,5 +54,8 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: './src/test/setup.js',
+    // Unit/component tests live under src/. End-to-end specs live in e2e/ and
+    // run under Playwright (see playwright.config.js) — never here.
+    include: ['src/**/*.{test,spec}.{js,jsx}'],
   },
 })
