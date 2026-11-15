@@ -37,7 +37,8 @@ src/
                 dose rows, forms, outcome grid, …)
   lib/          Adapters and cross-cutting logic:
                   api/      typed REST client (fetch + timeout + auth header)
-                  db/       IndexedDB repositories (per plan, encrypted fields)
+                  db/       local-first IndexedDB model (standalone offline,
+                            sync-ready — see docs/LOCAL_DATABASE.md)
                   sync/     outbound queue + sync engine + conflict surfacing
                   auth/     session, re-auth for sensitive ops
                   secure/   encryption helpers for local cache

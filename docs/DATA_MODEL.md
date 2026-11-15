@@ -4,6 +4,11 @@ Derived from SRS §9 (entities) and §10 (business rules). Final table details a
 decided during database design; this document fixes identity, relationships, and
 audit semantics that the frontend relies on.
 
+> **Local persistence (offline):** entities map 1:1 to the IndexedDB store
+> catalog in `LOCAL_DATABASE.md`, which also defines the sync-readiness envelope
+> every record carries. This document covers the conceptual model; that document
+> covers how it is stored on the device.
+
 ---
 
 ## Entity map

@@ -51,7 +51,7 @@ purchases and transport for a shared care plan.
 - `AGENTS.md` — project rules every AI agent must follow (source of truth,
   commands, architecture conventions, security rules).
 - Architecture docs: `docs/ARCHITECTURE.md`, `docs/DATA_MODEL.md`,
-  `docs/API_CONTRACT.md`, `docs/TESTING.md`,
+  `docs/LOCAL_DATABASE.md`, `docs/API_CONTRACT.md`, `docs/TESTING.md`,
   `docs/AI_DEVELOPMENT_INFRASTRUCTURE.md`.
 - Kilo commands (`.kilo/command/`): `/feature` (spec-first workflow), `/verify`
   (full quality gate), `/review` (multi-perspective review), `/spec` (SRS

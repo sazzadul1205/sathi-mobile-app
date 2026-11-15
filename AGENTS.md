@@ -19,7 +19,8 @@ with approved offline recording and queued sync.
   feature traces to an FR/BR/SR/NFR ID. If it is not in the SRS, it is not built.
 - **Visual reference:** `Project_Plan/Design.html` (26 approved screens).
 - **Architecture:** `docs/ARCHITECTURE.md`, `docs/DATA_MODEL.md`,
-  `docs/API_CONTRACT.md`, `docs/TESTING.md`, `docs/AI_DEVELOPMENT_INFRASTRUCTURE.md`.
+  `docs/LOCAL_DATABASE.md` (offline IndexedDB model), `docs/API_CONTRACT.md`,
+  `docs/TESTING.md`, `docs/AI_DEVELOPMENT_INFRASTRUCTURE.md`.
 - `dist/` and `Project_Plan/` are generated/read-only — never edit them by hand.
 
 ## Commands
@@ -42,7 +43,8 @@ build config, tokens, or the manifest.
 - **Server-authoritative.** Permission checks, stock math, and record integrity
   live on the backend. Client-side checks are UX mirrors only.
 - **Adapters in `src/lib/`.** Feature code never calls `fetch`/IndexedDB directly;
-  it goes through the API client (online) or the repository (offline).
+  it goes through the API client (online), the local DB layer (`src/lib/db/` —
+  standalone offline, sync-ready), or the repository (offline).
 - **Append-only records.** Dose outcomes, stock movements, and corrections are
   never silently overwritten; corrections reference the original (SRS FR-26/41).
 - **Sync identity.** Every offline change carries a unique event ID, recording
