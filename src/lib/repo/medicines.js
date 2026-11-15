@@ -20,7 +20,12 @@ export async function saveMedicine(db, data, { planId, recordedBy }) {
   const now = nowIso()
 
   if (existing) {
-    const updated = { ...existing, ...data, updatedAt: now }
+    const updated = {
+      ...existing,
+      ...data,
+      ...(data.times !== undefined ? { times: parseTimes(data.times) } : {}),
+      updatedAt: now,
+    }
     await medicines.put(updated)
     return updated
   }

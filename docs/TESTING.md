@@ -12,6 +12,7 @@ bridge between the SRS acceptance criteria and the code.
 | Token-contract | `src/styles/themes.test.js` | every color variant defines the full token contract |
 | PWA manifest & assets | `src/pwa/manifest.test.js` | manifest fields + PNG signature/dimensions of every icon |
 | Component | `src/**/*.test.jsx` (Vitest + Testing Library, jsdom) | render + interaction smoke tests per screen/feature |
+| End-to-end | `e2e/*.spec.js` (Playwright + Chromium) | full care flow, every route renders, routing guards, session persistence |
 | Sync engine (planned) | `src/lib/sync/*.test.js` | queue append, dedup by event ID, conflict surfacing |
 | API integration (backend repo) | backend test project | permission matrix, stock math, sync endpoint behavior |
 
@@ -37,8 +38,13 @@ feature is considered done:
 
 ## Running tests
 
-- `npm test` — full suite once (used by pre-push hook and CI).
-- `npm run test:watch` — watch mode while developing.
+- `npm test` — full Vitest suite once (used by pre-push hook and CI).
+- `npm run test:watch` — Vitest watch mode while developing.
+- `npm run test:e2e` — Playwright end-to-end suite. Starts its own Vite dev
+  server on a dedicated port (`5199`, strict, never reused) and drives Chromium;
+  service workers are blocked so runs stay deterministic. Requires
+  `npx playwright install chromium` once.
+- `npm run test:e2e:ui` — Playwright UI runner for stepping through e2e specs.
 - A failing test blocks `git push` and fails CI; there is no merge path around it.
 
 ## Writing tests (rules)

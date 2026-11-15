@@ -33,12 +33,14 @@ with approved offline recording and queued sync.
 | `npm run build` | Production build incl. service worker + manifest |
 | `npm run preview` | Preview the production build |
 | `npm run lint` | ESLint (must be clean) |
-| `npm test` | Vitest unit tests (must pass) |
+| `npm test` | Vitest unit + component tests (must pass) |
+| `npm run test:e2e` | Playwright end-to-end tests (Chromium) |
 | `npm run generate:icons` | Regenerate the PWA icon set |
 
 Verification is mandatory before finishing any change: `npm run lint && npm test`
 (the pre-push hook enforces this too) plus `npm run build` for anything touching
-build config, tokens, or the manifest.
+build config, tokens, or the manifest. Run `npm run test:e2e` for changes that
+affect routing, screens, or user flows.
 
 ## Architecture conventions
 

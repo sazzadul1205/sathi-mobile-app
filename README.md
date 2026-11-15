@@ -13,8 +13,11 @@ See `docs/FRONTEND_STATUS.md` for the exact implemented scope.
 | `npm run build` | Production build, including service worker + manifest (`dist/`) |
 | `npm run preview` | Preview the production build locally |
 | `npm run lint` | Run ESLint |
-| `npm test` | Run unit + repository tests once (Vitest) |
-| `npm run test:watch` | Run tests in watch mode |
+| `npm test` | Run unit + component tests once (Vitest) |
+| `npm run test:watch` | Run Vitest in watch mode |
+| `npm run test:e2e` | Run end-to-end browser tests (Playwright + Chromium) |
+| `npm run test:e2e:ui` | Open the Playwright UI runner |
+| `npm run test:all` | Run Vitest, then Playwright |
 | `npm run generate:icons` | Regenerate the PWA icon set from the inline SVG source |
 
 ## App structure
@@ -80,15 +83,22 @@ src/
 ## Testing & CI/CD
 
 - **Tests** — Vitest + Testing Library (jsdom). `src/App.test.jsx` covers a
-  render/interaction smoke test; `src/pwa/manifest.test.js` validates the
-  manifest and the actual PNG icon files (signature + pixel dimensions).
+  render/interaction smoke test; `src/screens/*.test.jsx` render every screen
+  (Login, PlanSelector, CreatePlan, Dashboard, Medicines, MedicineForm, Schedule,
+  Settings) against real repositories on fake-indexeddb; `src/pwa/manifest.test.js`
+  validates the manifest and the actual PNG icon files (signature + dimensions).
+- **End-to-end** — Playwright (Chromium) drives the real UI on a real IndexedDB:
+  the full care flow (sign in → create plan → add medicine → record dose → sign
+  out), a render check for every route, routing guards, and session persistence
+  across reloads. Specs live in `e2e/`; run with `npm run test:e2e`.
 - **Pre-push hook** — `simple-git-hooks` installs a git `pre-push` hook
   (configured in `package.json`) that runs `npm run lint && npm test`, so a
   failing test **blocks the push**. Hooks are (re)installed automatically on
   `npm install`. Escape hatch (not recommended): `SKIP_SIMPLE_GIT_HOOKS=1 git push`.
 - **CI pipeline** — `.github/workflows/ci.yml` runs on every push and pull
-  request: `npm ci` → `npm run lint` → `npm test` → `npm run build`, then
-  uploads the `dist/` bundle as a build artifact.
+  request: `npm ci` → `npm run lint` → `npm test` → `npm run build` (uploads the
+  `dist/` bundle), plus a separate Playwright `e2e` job that runs `npm run test:e2e`
+  and uploads the HTML report.
 
 ## Node version
 

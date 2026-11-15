@@ -4,10 +4,10 @@
 import 'fake-indexeddb/auto'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import Login from './Login.jsx'
 import { useSession } from '../store/session.js'
-import { resetAppDbCache } from '../lib/repo/app.js'
+import { createProfile, resetAppDbCache } from '../lib/repo/app.js'
 
 beforeEach(async () => {
   // Each test file gets an isolated fake-indexeddb instance; only the profile
@@ -46,5 +46,23 @@ describe('Login', () => {
       expect(useSession.getState().status).toBe('signed-in')
     })
     expect(useSession.getState().profile?.email).toBe('rafiq@example.com')
+  })
+
+  it('continues with an existing device profile', async () => {
+    await createProfile({ name: 'Nadia Karim', email: 'nadia@example.com' })
+    render(
+      <MemoryRouter initialEntries={['/login']}>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/select" element={<div>select page</div>} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    fireEvent.click(await screen.findByRole('button', { name: /Nadia Karim/ }))
+
+    expect(await screen.findByText('select page')).toBeInTheDocument()
+    await waitFor(() => expect(useSession.getState().status).toBe('signed-in'))
+    expect(useSession.getState().profile?.email).toBe('nadia@example.com')
   })
 })
