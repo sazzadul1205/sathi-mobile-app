@@ -1,0 +1,63 @@
+/* Sathi design tokens — "dark" variant
+ * Dark surfaces with lightened semantic colors for contrast on dark backgrounds.
+ */
+[data-theme='dark'] {
+  /* surfaces */
+  --t-bg: #0d1b26;
+  --t-app: #11222f;
+  --t-card: #162a3a;
+  --t-line: #24394b;
+  --t-line-2: #1c3040;
+
+  /* text */
+  --t-ink: #e8eef4;
+  --t-ink-2: #b6c4d1;
+  --t-muted: #8496a6;
+
+  /* brand */
+  --t-brand: #58a8cc;
+  --t-brand-dk: #8ecbe4;
+  --t-brand-soft: #173344;
+  --t-brand-gradient-from: #2b7ea1;
+  --t-brand-gradient-to: #123c52;
+
+  /* status: given */
+  --t-given: #3fbf8a;
+  --t-given-soft: #123527;
+
+  /* status: missed */
+  --t-missed: #e06052;
+  --t-missed-soft: #3a1a17;
+
+  /* status: refused */
+  --t-refused: #d99a2b;
+  --t-refused-soft: #3a2c12;
+
+  /* status: other */
+  --t-other: #9484d4;
+  --t-other-soft: #262040;
+
+  /* status: pending */
+  --t-pending: #93a3b2;
+  --t-pending-soft: #1c2833;
+
+  /* status: transit */
+  --t-transit: #5b93d6;
+  --t-transit-soft: #16283f;
+
+  /* status: sync */
+  --t-sync: #d99a2b;
+  --t-sync-soft: #3a2c12;
+
+  /* status: warn */
+  --t-warn: #d9a62b;
+  --t-warn-soft: #3a2c12;
+
+  /* status: danger */
+  --t-danger: #e06052;
+  --t-danger-soft: #3a1a17;
+
+  /* role: admin */
+  --t-admin: #7b96e8;
+  --t-admin-soft: #1c2540;
+}

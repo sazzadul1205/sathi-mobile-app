@@ -1,39 +1,55 @@
 /* src/index.css */
 @import "tailwindcss";
+@import "./styles/themes/default.css";
+@import "./styles/themes/ocean.css";
+@import "./styles/themes/sage.css";
+@import "./styles/themes/dark.css";
 
+/* Semantic color tokens.
+ * `inline` keeps utilities referencing var(--t-*) at runtime, so switching the
+ * active variant (html[data-theme="..."]) re-skins the whole app instantly.
+ */
+@theme inline {
+  --color-bg: var(--t-bg);
+  --color-app: var(--t-app);
+  --color-card: var(--t-card);
+  --color-ink: var(--t-ink);
+  --color-ink-2: var(--t-ink-2);
+  --color-muted: var(--t-muted);
+  --color-line: var(--t-line);
+  --color-line-2: var(--t-line-2);
+
+  --color-brand: var(--t-brand);
+  --color-brand-dk: var(--t-brand-dk);
+  --color-brand-soft: var(--t-brand-soft);
+  --color-brand-gradient-from: var(--t-brand-gradient-from);
+  --color-brand-gradient-to: var(--t-brand-gradient-to);
+
+  --color-given: var(--t-given);
+  --color-given-soft: var(--t-given-soft);
+  --color-missed: var(--t-missed);
+  --color-missed-soft: var(--t-missed-soft);
+  --color-refused: var(--t-refused);
+  --color-refused-soft: var(--t-refused-soft);
+  --color-other: var(--t-other);
+  --color-other-soft: var(--t-other-soft);
+  --color-pending: var(--t-pending);
+  --color-pending-soft: var(--t-pending-soft);
+  --color-transit: var(--t-transit);
+  --color-transit-soft: var(--t-transit-soft);
+  --color-sync: var(--t-sync);
+  --color-sync-soft: var(--t-sync-soft);
+  --color-warn: var(--t-warn);
+  --color-warn-soft: var(--t-warn-soft);
+  --color-danger: var(--t-danger);
+  --color-danger-soft: var(--t-danger-soft);
+
+  --color-admin: var(--t-admin);
+  --color-admin-soft: var(--t-admin-soft);
+}
+
+/* Static (non-color) tokens */
 @theme {
-  /* Colors from Sathi.html */
-  --color-bg: #eef3f6;
-  --color-app: #f6f9fb;
-  --color-card: #ffffff;
-  --color-ink: #0b1926;
-  --color-ink-2: #3e5163;
-  --color-muted: #7a8a99;
-  --color-line: #dce5ec;
-  --color-line-2: #ebf1f5;
-
-  --color-brand: #1f6f8b;
-  --color-brand-dk: #155365;
-  --color-brand-soft: #e4f1f6;
-
-  --color-given: #0e8a5f;
-  --color-given-soft: #e4f5ed;
-  --color-missed: #c8402f;
-  --color-missed-soft: #fdecea;
-  --color-refused: #c97a00;
-  --color-refused-soft: #fff4e2;
-  --color-other: #6b5baf;
-  --color-other-soft: #eeeaf9;
-  --color-pending: #8a99a8;
-  --color-pending-soft: #eff3f6;
-  --color-transit: #2f6fb5;
-  --color-transit-soft: #e8f0fc;
-  --color-sync: #b86e00;
-  --color-sync-soft: #fff4e2;
-  --color-warn: #9a6200;
-  --color-danger: #c0392b;
-  --color-danger-soft: #fdecea;
-
   /* Radii */
   --radius-sm: 10px;
   --radius-md: 14px;

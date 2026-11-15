@@ -1,0 +1,70 @@
+/* Sathi design tokens — "teal" (default palette from Design.html)
+ *
+ * Token contract: every theme file must define every --t-* variable below.
+ * Enforced by src/styles/themes.test.js.
+ *
+ * To add a custom variant: copy a theme file, rename the [data-theme] value,
+ * adjust the values, add an @import in src/index.css and list it in
+ * src/theme.js (availableThemes).
+ */
+:root,
+[data-theme='teal'] {
+  /* surfaces */
+  --t-bg: #eef3f6;
+  --t-app: #f6f9fb;
+  --t-card: #ffffff;
+  --t-line: #dce5ec;
+  --t-line-2: #ebf1f5;
+
+  /* text */
+  --t-ink: #0b1926;
+  --t-ink-2: #3e5163;
+  --t-muted: #7a8a99;
+
+  /* brand */
+  --t-brand: #1f6f8b;
+  --t-brand-dk: #155365;
+  --t-brand-soft: #e4f1f6;
+  --t-brand-gradient-from: #2885a8;
+  --t-brand-gradient-to: #155365;
+
+  /* status: given */
+  --t-given: #0e8a5f;
+  --t-given-soft: #e4f5ed;
+
+  /* status: missed */
+  --t-missed: #c8402f;
+  --t-missed-soft: #fdecea;
+
+  /* status: refused */
+  --t-refused: #c97a00;
+  --t-refused-soft: #fff4e2;
+
+  /* status: other */
+  --t-other: #6b5baf;
+  --t-other-soft: #eeeaf9;
+
+  /* status: pending */
+  --t-pending: #8a99a8;
+  --t-pending-soft: #eff3f6;
+
+  /* status: transit */
+  --t-transit: #2f6fb5;
+  --t-transit-soft: #e8f0fc;
+
+  /* status: sync */
+  --t-sync: #b86e00;
+  --t-sync-soft: #fff4e2;
+
+  /* status: warn */
+  --t-warn: #9a6200;
+  --t-warn-soft: #fff4e2;
+
+  /* status: danger */
+  --t-danger: #c0392b;
+  --t-danger-soft: #fdecea;
+
+  /* role: admin */
+  --t-admin: #3355c4;
+  --t-admin-soft: #eaf0ff;
+}

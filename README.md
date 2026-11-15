@@ -30,6 +30,36 @@ purchases and transport for a shared care plan.
 - **HTML meta** — `index.html` carries `theme-color`, `apple-mobile-web-app-*`
   and favicon/apple-touch links.
 
+## Design system (color templates)
+
+- The palette is a **modular token system** in `src/styles/`:
+  - `themes/default.css` — "teal" (default, from `Project_Plan/Design.html`).
+  - `themes/ocean.css`, `themes/sage.css`, `themes/dark.css` — additional
+    variants, each a self-contained `[data-theme="…"]` block.
+  - `src/index.css` maps the `--t-*` tokens into Tailwind (`@theme inline`), so
+    utilities like `bg-brand`/`text-ink` follow the active variant at runtime.
+  - `src/theme.js` — `initTheme()` / `setTheme()` controller (persists the
+    choice, honours OS dark-mode on first run).
+- **Adding a variant**: copy a theme file, rename the selector, adjust the
+  values, add an `@import` in `src/index.css`, and register the name in
+  `availableThemes` (`src/theme.js`). `src/styles/themes.test.js` fails if the
+  new file misses any token in the contract.
+- Architecture overview for the whole project: `docs/AI_DEVELOPMENT_INFRASTRUCTURE.md`.
+
+## AI development setup
+
+- `AGENTS.md` — project rules every AI agent must follow (source of truth,
+  commands, architecture conventions, security rules).
+- Architecture docs: `docs/ARCHITECTURE.md`, `docs/DATA_MODEL.md`,
+  `docs/API_CONTRACT.md`, `docs/TESTING.md`,
+  `docs/AI_DEVELOPMENT_INFRASTRUCTURE.md`.
+- Kilo commands (`.kilo/command/`): `/feature` (spec-first workflow), `/verify`
+  (full quality gate), `/review` (multi-perspective review), `/spec` (SRS
+  lookup), `/new-theme` (add a color variant), `/pwa-check` (validate PWA).
+- Kilo subagents (`.kilo/agent/`): `frontend-dev`, `test-writer`, `pwa-auditor`.
+- Agent Manager scripts: `.kilo/setup-script.ps1` (worktree `npm ci`) and
+  `.kilo/run-script.ps1` (dev server on a per-worktree port).
+
 ## Testing & CI/CD
 
 - **Tests** — Vitest + Testing Library (jsdom). `src/App.test.jsx` covers a
