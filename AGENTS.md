@@ -19,8 +19,10 @@ with approved offline recording and queued sync.
   feature traces to an FR/BR/SR/NFR ID. If it is not in the SRS, it is not built.
 - **Visual reference:** `Project_Plan/Design.html` (26 approved screens).
 - **Architecture:** `docs/ARCHITECTURE.md`, `docs/DATA_MODEL.md`,
-  `docs/LOCAL_DATABASE.md` (offline IndexedDB model), `docs/API_CONTRACT.md`,
-  `docs/TESTING.md`, `docs/AI_DEVELOPMENT_INFRASTRUCTURE.md`.
+  `docs/LOCAL_DATABASE.md` (offline IndexedDB model),
+  `docs/FRONTEND_STATUS.md` (implemented vs. pending scope — read before
+  claiming a feature exists), `docs/API_CONTRACT.md`, `docs/TESTING.md`,
+  `docs/AI_DEVELOPMENT_INFRASTRUCTURE.md`.
 - `dist/` and `Project_Plan/` are generated/read-only — never edit them by hand.
 
 ## Commands

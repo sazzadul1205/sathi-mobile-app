@@ -1,7 +1,9 @@
 # Sathi — Care Coordination (PWA)
 
 A React + Vite progressive web app for coordinating medication, inventory,
-purchases and transport for a shared care plan.
+purchases and transport for a shared care plan. Runs **standalone offline**
+(local-first IndexedDB); architected for server sync when the backend exists.
+See `docs/FRONTEND_STATUS.md` for the exact implemented scope.
 
 ## Scripts
 
@@ -11,9 +13,24 @@ purchases and transport for a shared care plan.
 | `npm run build` | Production build, including service worker + manifest (`dist/`) |
 | `npm run preview` | Preview the production build locally |
 | `npm run lint` | Run ESLint |
-| `npm test` | Run unit tests once (Vitest) |
+| `npm test` | Run unit + repository tests once (Vitest) |
 | `npm run test:watch` | Run tests in watch mode |
 | `npm run generate:icons` | Regenerate the PWA icon set from the inline SVG source |
+
+## App structure
+
+```
+src/
+  app/         root router, session/plan guards, tab-bar shell
+  screens/     Login, PlanSelector, CreatePlan, Dashboard, Medicines,
+               MedicineForm, Schedule, Settings
+  components/  shared UI kit (design tokens only)
+  store/       zustand stores: session, plan context, medicines
+  lib/
+    db/        local-first IndexedDB model (standalone offline, sync-ready)
+    repo/      repositories: app, plan, medicines, schedule, inventory
+  styles/      modular color-token system (themes/*.css)
+```
 
 ## PWA setup
 

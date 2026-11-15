@@ -2,6 +2,7 @@
 
 System architecture of the application. For the *development process*
 infrastructure (agents, gates, workflows) see `AI_DEVELOPMENT_INFRASTRUCTURE.md`.
+For the concrete implemented scope (standalone vs. pending), see `FRONTEND_STATUS.md`.
 
 ---
 
