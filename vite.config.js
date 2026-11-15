@@ -3,6 +3,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
+import { manifest } from './src/pwa/manifest.js'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -11,34 +12,47 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icons/*.png'],
-      manifest: {
-        name: 'Sathi — Care Coordination',
-        short_name: 'Sathi',
-        description:
-          'Coordinate medication, inventory, purchases and transport for a shared care plan.',
-        theme_color: '#1f6f8b',
-        background_color: '#eef3f6',
-        display: 'standalone',
-        start_url: '/',
-        scope: '/',
-        icons: [
-          { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-          { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' },
-          {
-            src: 'icons/icon-512-maskable.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'maskable',
-          },
-        ],
-      },
+      includeAssets: [
+        'favicon.svg',
+        'favicon-32x32.png',
+        'favicon-16x16.png',
+        'icons/*.png',
+      ],
+      manifest,
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
         navigateFallback: '/index.html',
+        runtimeCaching: [
+          {
+            urlPattern: ({ request }) => request.destination === 'image',
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'images',
+              expiration: {
+                maxEntries: 60,
+                maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
+              },
+            },
+          },
+          {
+            urlPattern: ({ request }) => request.destination === 'font',
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'fonts',
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 365 * 24 * 60 * 60, // 1 year
+              },
+            },
+          },
+        ],
       },
       devOptions: { enabled: true },
     }),
   ],
   server: { port: 5173, host: true },
+  test: {
+    environment: 'jsdom',
+    setupFiles: './src/test/setup.js',
+  },
 })
