@@ -26,19 +26,30 @@ export async function listSlots(db, { medicines, patient, date = new Date() } = 
   const records = await makeCollection(db, 'doseRecords').getAll()
   const slots = []
   for (const medicine of medicines) {
-    for (const time of medicine.times || []) {
-      const id = slotId(medicine.id, date, time)
+    for (const entry of medicine.times || []) {
+      const t = typeof entry === 'string'
+        ? { time: entry, quantity: medicine.doseQuantity, mealRelation: '' }
+        : {
+            time: entry?.time,
+            quantity: Number(entry?.quantity) > 0 ? Number(entry.quantity) : medicine.doseQuantity,
+            mealRelation: entry?.mealRelation || '',
+          }
+      if (!t.time) continue
+      const id = slotId(medicine.id, date, t.time)
       const existing = records.find((r) => r.slotId === id && r.kind !== 'correction')
+      const qty = existing?.doseQuantity ?? t.quantity ?? medicine.doseQuantity ?? 1
+      const mealRelation = existing?.mealRelation ?? t.mealRelation ?? ''
       slots.push({
         id,
         medicineId: medicine.id,
         medicineName: medicine.name,
         strength: medicine.strength,
-        doseQuantity: medicine.doseQuantity,
+        doseQuantity: qty,
         stockUnit: medicine.stockUnit,
-        time,
-        scheduledFor: `${dateKey(date)}T${time}:00`,
+        time: t.time,
+        scheduledFor: `${dateKey(date)}T${t.time}:00`,
         instructions: medicine.instructions,
+        mealRelation,
         patientLocation: patient?.location || null,
         outcome: existing?.outcome || null,
         record: existing || null,
@@ -68,6 +79,7 @@ export async function recordOutcome(db, { slot, outcome, recordedBy, notes, plan
       outcome,
       doseQuantity: slot.doseQuantity,
       stockUnit: slot.stockUnit,
+      mealRelation: slot.mealRelation || '',
       notes: (notes || '').trim(),
       kind: 'initial',
       correctsId: null,
@@ -96,7 +108,7 @@ export async function recordOutcome(db, { slot, outcome, recordedBy, notes, plan
 }
 
 // Append a correction: new row, original untouched (FR-26/27). If the
-// correction is 'given' (e.g. missed → given), stock moves then.
+// correction is 'given' (e.g. missed â†’ given), stock moves then.
 export async function correctDose(db, { slot, outcome, reason, recordedBy, notes, planId }) {
   const existing = await getDoseRecord(db, slot)
   if (!existing) throw new Error('nothing to correct — record the dose first')
@@ -110,6 +122,7 @@ export async function correctDose(db, { slot, outcome, reason, recordedBy, notes
       outcome,
       doseQuantity: slot.doseQuantity,
       stockUnit: slot.stockUnit,
+      mealRelation: slot.mealRelation || existing.mealRelation || '',
       notes: (notes || '').trim(),
       kind: 'correction',
       correctsId: existing.id,

@@ -1,19 +1,29 @@
-// src/screens/Medicines.jsx
-// Medicines list (SRS §8): location-aware stock totals, patient-carried supply
-// included (BR-08), low stock surfaced. Different strengths are separate rows
-// (FR-15).
+﻿import { Link } from "react-router-dom"
+import { Plus } from "lucide-react"
+import { useMedicines } from "../store/medicines.js"
+import { usePlans } from "../store/plan.js"
+import { EmptyState, IconButton, Loading, StatusPill } from "../components/ui.jsx"
 
-import { Link } from 'react-router-dom'
-import { Plus } from 'lucide-react'
-import { useMedicines } from '../store/medicines.js'
-import { usePlans } from '../store/plan.js'
-import { EmptyState, IconButton, Loading, StatusPill } from '../components/ui.jsx'
+function formatTimes(times) {
+  if (!times?.length) return ""
+  return times
+    .map((t) => (typeof t === "string" ? t : t?.time))
+    .filter(Boolean)
+    .join(", ")
+}
+
+function mealShort(rel) {
+  if (rel === "before") return "before food"
+  if (rel === "after") return "after food"
+  if (rel === "with") return "with food"
+  return ""
+}
 
 export default function Medicines() {
   const { status, medicines, stock, lowStock } = useMedicines()
   const { context } = usePlans()
 
-  if (status === 'loading') return <Loading />
+  if (status === "loading") return <Loading />
 
   return (
     <div>
@@ -22,7 +32,7 @@ export default function Medicines() {
           <h2 className="text-xl font-bold tracking-tight">Medicines</h2>
           <div className="mt-0.5 text-xs text-muted">
             {medicines.length} active
-            {lowStock.length ? ` · ${lowStock.length} low stock` : ''}
+            {lowStock.length ? ` · ${lowStock.length} low stock` : ""}
           </div>
         </div>
         <Link to="/plan/meds/new" aria-label="Add medicine">
@@ -36,6 +46,10 @@ export default function Medicines() {
         medicines.map((medicine) => {
           const medicineStock = stock[medicine.id]
           const locations = context?.locations || []
+          const timeSummary = formatTimes(medicine.times)
+          const details = (medicine.times || [])
+            .filter((t) => t && typeof t === "object" && (t.mealRelation || Number(t.quantity) !== Number(medicine.doseQuantity)))
+            .map((t) => `${t.time} ${t.quantity ?? medicine.doseQuantity} ${medicine.stockUnit}${mealShort(t.mealRelation) ? ` ${mealShort(t.mealRelation)}` : ""}`)
           return (
             <Link
               key={medicine.id}
@@ -49,31 +63,24 @@ export default function Medicines() {
                   </div>
                   <div className="mt-0.5 text-[11.5px] text-muted">
                     {medicine.form} · {medicine.route}
-                    {medicine.times?.length ? ` · ${medicine.times.join(', ')}` : ''}
+                    {timeSummary ? ` · ${timeSummary}` : ""}
                   </div>
+                  {details.length ? (
+                    <div className="mt-1 text-[11px] text-muted">{details.join(" · ")}</div>
+                  ) : null}
                 </div>
-                {lowStock.includes(medicine.id) ? (
-                  <StatusPill tone="low">Low</StatusPill>
-                ) : null}
+                {lowStock.includes(medicine.id) ? <StatusPill tone="low">Low</StatusPill> : null}
               </div>
               <div className="grid grid-cols-3 gap-1.5 rounded-lg bg-app p-2">
                 {locations.slice(0, 2).map((location) => (
                   <div key={location.id} className="text-center">
-                    <div className="text-sm font-bold tabular-nums">
-                      {medicineStock?.byLocation?.[location.id] ?? 0}
-                    </div>
-                    <div className="text-[9.5px] font-semibold uppercase tracking-wider text-muted">
-                      {location.name}
-                    </div>
+                    <div className="text-sm font-bold tabular-nums">{medicineStock?.byLocation?.[location.id] ?? 0}</div>
+                    <div className="text-[9.5px] font-semibold uppercase tracking-wider text-muted">{location.name}</div>
                   </div>
                 ))}
                 <div className="rounded-md bg-card px-1 py-1 text-center">
-                  <div className="text-sm font-bold tabular-nums">
-                    {medicineStock?.total ?? 0}
-                  </div>
-                  <div className="text-[9.5px] font-semibold uppercase tracking-wider text-muted">
-                    Total
-                  </div>
+                  <div className="text-sm font-bold tabular-nums">{medicineStock?.total ?? 0}</div>
+                  <div className="text-[9.5px] font-semibold uppercase tracking-wider text-muted">Total</div>
                 </div>
               </div>
             </Link>
@@ -94,8 +101,7 @@ export default function Medicines() {
       )}
 
       <p className="mt-3 rounded-md border border-dashed border-line bg-app px-3.5 py-2.5 text-[11px] leading-relaxed text-muted">
-        Different strengths are separate records. The app never modifies prescribed
-        instructions automatically.
+        Different strengths are separate records. The app never modifies prescribed instructions automatically.
       </p>
     </div>
   )

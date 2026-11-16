@@ -1,30 +1,27 @@
-// src/screens/MedicineForm.jsx
-// Add / edit a medicine (SRS §9). Instructions are entered manually from the
-// actual prescription — the app never generates them (FR-16/17, BR-15).
-// Edit mode also allows recording a stock receipt (FR-52).
-
-import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { AlertTriangle } from 'lucide-react'
-import { useMedicines } from '../store/medicines.js'
-import { usePlans } from '../store/plan.js'
-import { Button, Field, Loading, ScreenHeader, Select, TextArea, TextInput, Toggle } from '../components/ui.jsx'
+﻿import { useEffect, useState } from "react"
+import { useNavigate, useParams } from "react-router-dom"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
+import { AlertTriangle, Clock, Plus, Trash2 } from "lucide-react"
+import { useMedicines } from "../store/medicines.js"
+import { usePlans } from "../store/plan.js"
+import { Button, Field, Loading, ScreenHeader, Select, TextArea, TextInput, Toggle } from "../components/ui.jsx"
 
 const schema = z.object({
-  name: z.string().trim().min(1, 'Medicine name is required'),
+  name: z.string().trim().min(1, "Medicine name is required"),
   strength: z.string().trim(),
-  form: z.enum(['Tablet', 'Capsule', 'Liquid', 'Injection', 'Other']),
-  stockUnit: z.string().trim().min(1, 'Stock unit is required'),
-  doseQuantity: z.coerce.number().positive('Must be at least 1'),
-  route: z.enum(['Oral', 'Subcutaneous', 'Topical', 'Inhaled', 'Other']),
+  form: z.enum(["Tablet", "Capsule", "Liquid", "Injection", "Other"]),
+  stockUnit: z.string().trim().min(1, "Stock unit is required"),
+  route: z.enum(["Oral", "Subcutaneous", "Topical", "Inhaled", "Other"]),
   instructions: z.string().trim(),
-  times: z.string().trim(),
-  lowStockThreshold: z.coerce.number().min(0, 'Cannot be negative'),
+  lowStockThreshold: z.coerce.number().min(0, "Cannot be negative"),
   notes: z.string().trim(),
 })
+
+function defaultSlot(stockUnit = "tablet") {
+  return { time: "", quantity: 1, mealRelation: "", unit: stockUnit }
+}
 
 export default function MedicineForm() {
   const { medicineId } = useParams()
@@ -35,57 +32,94 @@ export default function MedicineForm() {
   const [busy, setBusy] = useState(false)
   const [activeOverride, setActiveOverride] = useState(undefined)
   const [error, setError] = useState(null)
+  const [doseTimes, setDoseTimes] = useState([defaultSlot()])
 
   const {
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(schema),
     defaultValues: {
-      name: '',
-      strength: '',
-      form: 'Tablet',
-      stockUnit: 'tablet',
-      doseQuantity: 1,
-      route: 'Oral',
-      instructions: '',
-      times: '',
+      name: "",
+      strength: "",
+      form: "Tablet",
+      stockUnit: "tablet",
+      route: "Oral",
+      instructions: "",
       lowStockThreshold: 10,
-      notes: '',
+      notes: "",
     },
   })
 
+  const stockUnit = watch("stockUnit") || "tablet"
   const existing = isEdit ? medicines.find((m) => m.id === medicineId) : null
 
   useEffect(() => {
     if (isEdit && existing) {
       reset({
         name: existing.name,
-        strength: existing.strength || '',
-        form: existing.form || 'Tablet',
-        stockUnit: existing.stockUnit || 'tablet',
-        doseQuantity: existing.doseQuantity ?? 1,
-        route: existing.route || 'Oral',
-        instructions: existing.instructions || '',
-        times: (existing.times || []).join(', '),
+        strength: existing.strength || "",
+        form: existing.form || "Tablet",
+        stockUnit: existing.stockUnit || "tablet",
+        route: existing.route || "Oral",
+        instructions: existing.instructions || "",
         lowStockThreshold: existing.lowStockThreshold ?? 10,
-        notes: existing.notes || '',
+        notes: existing.notes || "",
       })
+      const times = (existing.times || []).map((t) =>
+        typeof t === "string"
+          ? { time: t, quantity: existing.doseQuantity ?? 1, mealRelation: "" }
+          : {
+              time: t?.time || "",
+              quantity: Number(t?.quantity) > 0 ? Number(t.quantity) : (existing.doseQuantity ?? 1),
+              mealRelation: t?.mealRelation || "",
+            },
+      )
+      setDoseTimes(times.length ? times.sort((a, b) => (a.time > b.time ? 1 : -1)) : [defaultSlot(existing.stockUnit || "tablet")])
     }
   }, [isEdit, existing, reset])
 
   const active = activeOverride ?? existing?.active ?? true
 
-  if (status === 'loading' || (isEdit && !existing)) return <Loading />
+  if (status === "loading" || (isEdit && !existing)) return <Loading />
+
+  function updateSlot(index, patch) {
+    setDoseTimes((prev) => prev.map((item, i) => (i === index ? { ...item, ...patch } : item)))
+  }
+
+  function addTime() {
+    setDoseTimes((prev) => [...prev, defaultSlot(stockUnit)])
+  }
+
+  function removeTime(index) {
+    setDoseTimes((prev) => {
+      const next = prev.filter((_, i) => i !== index)
+      return next.length ? next : [defaultSlot(stockUnit)]
+    })
+  }
 
   async function onSubmit(values) {
     setBusy(true)
     setError(null)
     try {
-      await save({ ...values, active, id: isEdit ? existing.id : undefined })
-      navigate('/plan/meds')
+      const times = doseTimes
+        .filter((t) => t.time)
+        .map((t) => ({
+          time: t.time,
+          quantity: Number(t.quantity) > 0 ? Number(t.quantity) : 1,
+          mealRelation: t.mealRelation || "",
+        }))
+      if (!times.length) {
+        setError("Add at least one dose time.")
+        setBusy(false)
+        return
+      }
+      const doseQuantity = times[0]?.quantity || 1
+      await save({ ...values, doseQuantity, times, active, id: isEdit ? existing.id : undefined })
+      navigate("/plan/meds")
     } catch (err) {
       setError(String(err.message || err))
       setBusy(false)
@@ -95,21 +129,21 @@ export default function MedicineForm() {
   return (
     <div className="min-h-dvh px-5 py-8">
       <div className="mx-auto w-full max-w-md">
-        <ScreenHeader title={isEdit ? 'Edit medicine' : 'New medicine'} backTo />
+        <ScreenHeader title={isEdit ? "Edit medicine" : "New medicine"} backTo />
 
         <form onSubmit={handleSubmit(onSubmit)}>
           <Field label="Medicine name">
-            <TextInput placeholder="Metformin" {...register('name')} />
+            <TextInput placeholder="Metformin" {...register("name")} />
             {errors.name ? <FieldError>{errors.name.message}</FieldError> : null}
           </Field>
 
           <div className="grid grid-cols-2 gap-2.5">
             <Field label="Strength">
-              <TextInput placeholder="500 mg" {...register('strength')} />
+              <TextInput placeholder="500 mg" {...register("strength")} />
             </Field>
             <Field label="Form">
-              <Select {...register('form')}>
-                {['Tablet', 'Capsule', 'Liquid', 'Injection', 'Other'].map((option) => (
+              <Select {...register("form")}>
+                {["Tablet", "Capsule", "Liquid", "Injection", "Other"].map((option) => (
                   <option key={option}>{option}</option>
                 ))}
               </Select>
@@ -117,8 +151,8 @@ export default function MedicineForm() {
           </div>
 
           <Field label="Stock unit">
-            <Select {...register('stockUnit')}>
-              {['tablet', 'capsule', 'ml', 'vial', 'ampoule', 'tube', 'bottle'].map((option) => (
+            <Select {...register("stockUnit")}>
+              {["tablet", "capsule", "ml", "vial", "ampoule", "tube", "bottle"].map((option) => (
                 <option key={option}>{option}</option>
               ))}
             </Select>
@@ -126,8 +160,8 @@ export default function MedicineForm() {
 
           <Field label="Prescribed dose instructions">
             <TextArea
-              placeholder="1 tablet after breakfast and 1 tablet after lunch"
-              {...register('instructions')}
+              placeholder="e.g. Morning 2 tablets after breakfast, night 1 tablet before sleep"
+              {...register("instructions")}
             />
           </Field>
 
@@ -140,30 +174,83 @@ export default function MedicineForm() {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-2.5">
-            <Field label="Dose quantity">
-              <TextInput type="number" min="1" step="0.5" {...register('doseQuantity')} />
-              {errors.doseQuantity ? <FieldError>{errors.doseQuantity.message}</FieldError> : null}
-            </Field>
-            <Field label="Route">
-              <Select {...register('route')}>
-                {['Oral', 'Subcutaneous', 'Topical', 'Inhaled', 'Other'].map((option) => (
-                  <option key={option}>{option}</option>
-                ))}
-              </Select>
-            </Field>
-          </div>
-
-          <Field label="Dose times" hint="comma separated, 24h">
-            <TextInput placeholder="08:00, 13:00, 21:00" {...register('times')} />
+          <Field label="Route">
+            <Select {...register("route")}>
+              {["Oral", "Subcutaneous", "Topical", "Inhaled", "Other"].map((option) => (
+                <option key={option}>{option}</option>
+              ))}
+            </Select>
           </Field>
 
+          <div className="mb-3.5 block">
+            <span className="mb-1.5 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-muted">
+              <Clock className="size-3.5" /> Dose schedule
+              <span className="font-medium normal-case tracking-normal text-muted">(time, amount, before/after eating)</span>
+            </span>
+            <div className="space-y-2.5">
+              {doseTimes.map((slot, index) => (
+                <div key={index} className="rounded-md border border-line bg-card p-2.5">
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-muted">Dose {index + 1}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeTime(index)}
+                      aria-label={`Remove dose ${index + 1}`}
+                      className="grid size-8 place-items-center rounded-md border border-line bg-app text-muted transition-colors hover:text-missed disabled:opacity-40"
+                      disabled={doseTimes.length === 1}
+                    >
+                      <Trash2 className="size-4" />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Field label="Time">
+                      <TextInput
+                        type="time"
+                        value={slot.time}
+                        onChange={(e) => updateSlot(index, { time: e.target.value })}
+                        aria-label={`Dose time ${index + 1}`}
+                      />
+                    </Field>
+                    <Field label={`Quantity (${stockUnit})`}>
+                      <TextInput
+                        type="number"
+                        min="0.5"
+                        step="0.5"
+                        value={slot.quantity}
+                        onChange={(e) => updateSlot(index, { quantity: e.target.value })}
+                        aria-label={`Dose quantity ${index + 1}`}
+                      />
+                    </Field>
+                  </div>
+                  <Field label="Meal timing">
+                    <Select
+                      value={slot.mealRelation}
+                      onChange={(e) => updateSlot(index, { mealRelation: e.target.value })}
+                      aria-label={`Meal timing ${index + 1}`}
+                    >
+                      <option value="">Not specified</option>
+                      <option value="before">Before eating</option>
+                      <option value="after">After eating</option>
+                      <option value="with">With food</option>
+                    </Select>
+                  </Field>
+                </div>
+              ))}
+            </div>
+            <Button type="button" variant="secondary" size="sm" className="mt-2 w-auto" onClick={addTime}>
+              <Plus className="size-3.5" /> Add dose time
+            </Button>
+            <p className="mt-1.5 text-[11px] leading-relaxed text-muted">
+              Add as many times as needed (each can have different quantity and before/after eating). Times are saved in 24-hour format and sorted.
+            </p>
+          </div>
+
           <Field label="Low-stock threshold">
-            <TextInput type="number" min="0" {...register('lowStockThreshold')} />
+            <TextInput type="number" min="0" {...register("lowStockThreshold")} />
           </Field>
 
           <Field label="General notes" hint="optional">
-            <TextArea placeholder="Take with water" {...register('notes')} />
+            <TextArea placeholder="Take with water" {...register("notes")} />
           </Field>
 
           {isEdit ? (
@@ -198,7 +285,7 @@ export default function MedicineForm() {
               Cancel
             </Button>
             <Button type="submit" disabled={busy}>
-              {busy ? 'Saving…' : isEdit ? 'Save medicine' : 'Add medicine'}
+              {busy ? "Saving…" : isEdit ? "Save medicine" : "Add medicine"}
             </Button>
           </div>
         </form>
@@ -212,8 +299,8 @@ function FieldError({ children }) {
 }
 
 function ReceiveStock({ medicine, locations, onReceive }) {
-  const [quantity, setQuantity] = useState('30')
-  const [locationName, setLocationName] = useState(locations[0]?.name || 'Dhaka')
+  const [quantity, setQuantity] = useState("30")
+  const [locationName, setLocationName] = useState(locations[0]?.name || "Dhaka")
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState(false)
 
@@ -257,7 +344,7 @@ function ReceiveStock({ medicine, locations, onReceive }) {
           ))}
         </Select>
         <Button type="button" size="sm" onClick={handleReceive} disabled={busy}>
-          {busy ? '…' : done ? 'Added' : 'Add'}
+          {busy ? "…" : done ? "Added" : "Add"}
         </Button>
       </div>
       <p className="mt-1.5 text-[10.5px] text-muted">
