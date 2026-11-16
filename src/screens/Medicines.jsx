@@ -1,8 +1,10 @@
 ﻿import { Link } from "react-router-dom"
-import { Plus } from "lucide-react"
+import { useEffect, useState } from "react"
+import { Plus, Copy, Trash2, Layers } from "lucide-react"
 import { useMedicines } from "../store/medicines.js"
 import { usePlans } from "../store/plan.js"
-import { EmptyState, IconButton, Loading, StatusPill } from "../components/ui.jsx"
+import { listMedicineTemplates, saveMedicineTemplate, deleteMedicineTemplate } from "../lib/repo/medicineTemplates.js"
+import { Button, Card, EmptyState, Field, IconButton, Loading, StatusPill, TextInput } from "../components/ui.jsx"
 
 function formatTimes(times) {
   if (!times?.length) return ""
@@ -20,10 +22,73 @@ function mealShort(rel) {
 }
 
 export default function Medicines() {
-  const { status, medicines, stock, lowStock } = useMedicines()
+  const { status, medicines, stock, lowStock, save } = useMedicines()
   const { context } = usePlans()
+  const [templates, setTemplates] = useState([])
+  const [templateName, setTemplateName] = useState("")
+  const [templateBusy, setTemplateBusy] = useState(false)
+  const [templateMsg, setTemplateMsg] = useState(null)
+  const [templateError, setTemplateError] = useState(null)
+
+  async function loadTemplates() {
+    setTemplates(await listMedicineTemplates())
+  }
+
+  useEffect(() => {
+    let cancelled = false
+    listMedicineTemplates().then((list) => {
+      if (!cancelled) setTemplates(list)
+    })
+    return () => { cancelled = true }
+  }, [])
 
   if (status === "loading") return <Loading />
+
+  async function handleSaveTemplate(e) {
+    e.preventDefault()
+    setTemplateBusy(true)
+    setTemplateError(null)
+    setTemplateMsg(null)
+    try {
+      await saveMedicineTemplate({ name: templateName, medicines })
+      setTemplateName("")
+      setTemplateMsg("Template saved from current medicines.")
+      await loadTemplates()
+    } catch (err) {
+      setTemplateError(String(err.message || err))
+    } finally {
+      setTemplateBusy(false)
+    }
+  }
+
+  async function handleApplyTemplate(template) {
+    setTemplateBusy(true)
+    setTemplateError(null)
+    setTemplateMsg(null)
+    try {
+      const existingKeys = new Set(medicines.map((m) => `${(m.name || "").toLowerCase()}|${(m.strength || "").toLowerCase()}`))
+      let added = 0
+      for (const med of template.medicines || []) {
+        const key = `${(med.name || "").toLowerCase()}|${(med.strength || "").toLowerCase()}`
+        if (existingKeys.has(key)) continue
+        await save({ ...med, id: undefined })
+        existingKeys.add(key)
+        added += 1
+      }
+      setTemplateMsg(added ? `Added ${added} medicine${added === 1 ? "" : "s"} from "${template.name}".` : `No new medicines added from "${template.name}" (all already exist).`)
+    } catch (err) {
+      setTemplateError(String(err.message || err))
+    } finally {
+      setTemplateBusy(false)
+    }
+  }
+
+  async function handleDeleteTemplate(id) {
+    setTemplateError(null)
+    setTemplateMsg(null)
+    await deleteMedicineTemplate(id)
+    await loadTemplates()
+  }
 
   return (
     <div>
@@ -41,6 +106,53 @@ export default function Medicines() {
           </IconButton>
         </Link>
       </div>
+
+      <Card className="mb-4">
+        <div className="mb-2 flex items-center gap-2">
+          <Layers className="size-4 text-brand" />
+          <div className="text-sm font-bold">Medicine templates</div>
+        </div>
+        <p className="mb-3 text-[11px] leading-relaxed text-muted">
+          Save your current medicines as a template, then add all medicines from a template in one click. Existing medicines with the same name and strength are skipped.
+        </p>
+
+        <form onSubmit={handleSaveTemplate} className="mb-3 flex gap-2 items-end">
+          <div className="flex-1">
+            <Field label="Template name">
+              <TextInput value={templateName} onChange={(e) => setTemplateName(e.target.value)} placeholder="e.g. Daily home medicines" aria-label="Template name" />
+            </Field>
+          </div>
+          <Button type="submit" size="sm" disabled={templateBusy || !templateName.trim() || medicines.length === 0} className="mb-3.5 w-auto flex-none">
+            Save template
+          </Button>
+        </form>
+
+        {templateError ? <p className="mb-2 text-[11px] font-semibold text-missed">{templateError}</p> : null}
+        {templateMsg ? <p className="mb-2 text-[11px] font-semibold text-brand">{templateMsg}</p> : null}
+
+        {templates.length ? (
+          <div className="space-y-2">
+            {templates.map((template) => (
+              <div key={template.id} className="flex items-center justify-between gap-2 rounded-lg border border-line bg-app px-3 py-2.5">
+                <div className="min-w-0">
+                  <div className="truncate text-xs font-bold">{template.name}</div>
+                  <div className="text-[11px] text-muted">{template.medicines?.length || 0} medicine{(template.medicines?.length || 0) === 1 ? "" : "s"}</div>
+                </div>
+                <div className="flex flex-none gap-1.5">
+                  <Button type="button" size="sm" className="w-auto px-2.5 py-1.5 text-[11px]" onClick={() => handleApplyTemplate(template)} disabled={templateBusy}>
+                    <Copy className="size-3.5" /> Add all
+                  </Button>
+                  <button type="button" aria-label={`Delete template ${template.name}`} onClick={() => handleDeleteTemplate(template.id)} disabled={templateBusy} className="grid size-8 place-items-center rounded-md border border-line bg-card text-muted hover:text-missed disabled:opacity-40">
+                    <Trash2 className="size-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-[11px] text-muted">No templates yet. Add medicines, then save them as a reusable template.</p>
+        )}
+      </Card>
 
       {medicines.length ? (
         medicines.map((medicine) => {

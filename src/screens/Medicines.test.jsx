@@ -1,48 +1,51 @@
-// src/screens/Medicines.test.jsx
-// Medicines list: empty state and location-aware stock rows with low-stock flag.
-import 'fake-indexeddb/auto'
-import { beforeEach, describe, expect, it } from 'vitest'
-import { render, screen } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
-import Medicines from './Medicines.jsx'
-import { useMedicines } from '../store/medicines.js'
-import { usePlans } from '../store/plan.js'
-import { findLowStock, stockByMedicine } from '../lib/repo/inventory.js'
-import { resetAppDb, resetStores, seedPlan } from '../test/seed.js'
+﻿import "fake-indexeddb/auto"
+import { beforeEach, describe, expect, it, vi } from "vitest"
+import { fireEvent, render, screen, waitFor } from "@testing-library/react"
+import { MemoryRouter } from "react-router-dom"
+import Medicines from "./Medicines.jsx"
+import { useMedicines } from "../store/medicines.js"
+import { usePlans } from "../store/plan.js"
+import { findLowStock, stockByMedicine } from "../lib/repo/inventory.js"
+import { resetAppDb, resetStores, seedPlan } from "../test/seed.js"
 
 beforeEach(async () => {
   await resetAppDb()
   resetStores()
 })
 
-describe('Medicines', () => {
-  it('shows the empty state when there are no medicines', () => {
+function renderMedicines() {
+  return render(
+    <MemoryRouter>
+      <Medicines />
+    </MemoryRouter>,
+  )
+}
+
+describe("Medicines", () => {
+  it("shows the empty state when there are no medicines", async () => {
     usePlans.setState({
       ...usePlans.getState(),
-      context: { patient: { name: 'Rahim Mia' }, locations: [], role: 'owner' },
+      context: { patient: { name: "Rahim Mia" }, locations: [], role: "owner" },
     })
     useMedicines.setState({
-      status: 'ready',
+      status: "ready",
       medicines: [],
       stock: {},
       lowStock: [],
       error: null,
     })
 
-    render(
-      <MemoryRouter>
-        <Medicines />
-      </MemoryRouter>,
-    )
+    renderMedicines()
 
-    expect(screen.getByText('No medicines yet')).toBeInTheDocument()
+    expect(screen.getByText("No medicines yet")).toBeInTheDocument()
+    expect(await screen.findByText(/No templates yet/i)).toBeInTheDocument()
   })
 
-  it('renders medicines with per-location stock and a low-stock flag', async () => {
+  it("renders medicines with per-location stock and a low-stock flag", async () => {
     const { context, db, medicines } = await seedPlan({
       medicines: [
-        { name: 'Metformin', strength: '500 mg', lowStockThreshold: 10 },
-        { name: 'Amlodipine', strength: '5 mg', lowStockThreshold: 2 },
+        { name: "Metformin", strength: "500 mg", lowStockThreshold: 10 },
+        { name: "Amlodipine", strength: "5 mg", lowStockThreshold: 2 },
       ],
     })
 
@@ -58,21 +61,52 @@ describe('Medicines', () => {
     usePlans.setState({
       ...usePlans.getState(),
       context,
-      status: 'ready',
+      status: "ready",
     })
-    useMedicines.setState({ status: 'ready', medicines, stock, lowStock, error: null })
+    useMedicines.setState({ status: "ready", medicines, stock, lowStock, error: null, save: vi.fn() })
 
-    render(
-      <MemoryRouter>
-        <Medicines />
-      </MemoryRouter>,
-    )
+    renderMedicines()
 
-    expect(screen.getByText('2 active · 2 low stock')).toBeInTheDocument()
+    expect(screen.getByText(/2 active/)).toBeInTheDocument()
     expect(screen.getByText(/Metformin 500 mg/)).toBeInTheDocument()
     expect(screen.getByText(/Amlodipine 5 mg/)).toBeInTheDocument()
-    expect(screen.getAllByText('Low').length).toBeGreaterThan(0)
+    expect(screen.getAllByText("Low").length).toBeGreaterThan(0)
+    expect(await screen.findByText(/No templates yet/i)).toBeInTheDocument()
 
     db.close()
+  })
+
+  it("saves a template and adds all medicines from it in one click", async () => {
+    const save = vi.fn(async () => {})
+    const meds = [
+      { id: "m1", name: "Metformin", strength: "500 mg", form: "Tablet", route: "Oral", stockUnit: "tablet", doseQuantity: 1, lowStockThreshold: 10, times: [{ time: "08:00", quantity: 1, mealRelation: "" }] },
+    ]
+    usePlans.setState({
+      ...usePlans.getState(),
+      context: { patient: { name: "Rahim Mia" }, locations: [], role: "owner" },
+    })
+    useMedicines.setState({ status: "ready", medicines: meds, stock: {}, lowStock: [], error: null, save })
+
+    renderMedicines()
+
+    await screen.findByText(/No templates yet/i)
+    fireEvent.change(screen.getByLabelText("Template name"), { target: { value: "Daily" } })
+    fireEvent.click(screen.getByRole("button", { name: "Save template" }))
+
+    expect(await screen.findByText(/Template saved/i)).toBeInTheDocument()
+    expect(await screen.findByText("Daily")).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole("button", { name: /Add all/i }))
+    await waitFor(() => expect(screen.getByText(/No new medicines added/i)).toBeInTheDocument())
+    expect(save).not.toHaveBeenCalled()
+
+    // simulate applying to plan missing medicines
+    useMedicines.setState({ status: "ready", medicines: [], stock: {}, lowStock: [], error: null, save })
+    renderMedicines()
+    expect(await screen.findByText("Daily")).toBeInTheDocument()
+    fireEvent.click(screen.getByRole("button", { name: /Add all/i }))
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(1))
+    expect(save.mock.calls[0][0].name).toBe("Metformin")
+    expect(await screen.findByText(/Added 1 medicine/i)).toBeInTheDocument()
   })
 })

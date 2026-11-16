@@ -65,6 +65,7 @@ test.describe("authenticated pages", () => {
     await page.goto("/#/plan/meds")
     await expect(page.getByRole("heading", { name: "Medicines" })).toBeVisible()
     await expect(page.getByText(medicine.name).first()).toBeVisible()
+    await expect(page.getByText("Medicine templates")).toBeVisible()
     await page.getByRole("link", { name: "Add medicine" }).first().click()
     await expect(page.getByRole("heading", { name: "New medicine" })).toBeVisible()
     await page.goto("/#/plan/meds")
@@ -123,5 +124,19 @@ test.describe("authenticated pages", () => {
     await page.goto("/#/recover")
     await expect(page.getByRole("heading", { name: "Recover account" })).toBeVisible()
     await expect(page.getByPlaceholder("you@example.com")).toBeVisible()
+  })
+
+  test("saves and applies a medicine template in one click", async ({ page }) => {
+    await seedApp(page)
+    await page.goto("/#/plan/meds")
+    await expect(page.getByText("Medicine templates")).toBeVisible()
+
+    await page.getByLabel("Template name").fill("Daily plan")
+    await page.getByRole("button", { name: "Save template" }).click()
+    await expect(page.getByText(/Template saved/i)).toBeVisible()
+    await expect(page.getByText("Daily plan")).toBeVisible()
+
+    await page.getByRole("button", { name: /Add all/i }).click()
+    await expect(page.getByText(/No new medicines added/i)).toBeVisible()
   })
 })
