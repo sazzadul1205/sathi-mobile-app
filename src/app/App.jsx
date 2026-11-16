@@ -1,11 +1,13 @@
-﻿import { useEffect, useMemo } from 'react'
+﻿import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Navigate,
   Outlet,
   RouterProvider,
   createHashRouter,
+  useLocation,
+  useNavigate,
 } from 'react-router-dom'
-import { Heart } from 'lucide-react'
+import { Heart, Loader2 } from 'lucide-react'
 import { useSession } from '../store/session.js'
 import { usePlans } from '../store/plan.js'
 import { TabBar } from '../components/ui.jsx'
@@ -70,13 +72,93 @@ function HomeRedirect() {
   return <Navigate to="/plan" replace />
 }
 
+const TAB_PATHS = ['/plan', '/plan/schedule', '/plan/meds', '/plan/settings']
+
 function PlanLayout() {
   const currentPlanId = usePlans((s) => s.currentPlanId)
   const context = usePlans((s) => s.context)
+  const navigate = useNavigate()
+  const location = useLocation()
+  const mainRef = useRef(null)
+  const touchRef = useRef(null)
+  const [pull, setPull] = useState(0)
+  const [refreshing, setRefreshing] = useState(false)
+
   if (!currentPlanId || !context) return <Navigate to="/select" replace />
+
+  const onTouchStart = (e) => {
+    if (refreshing) return
+    const t = e.touches[0]
+    const atTop = (mainRef.current?.scrollTop ?? window.scrollY ?? 0) <= 0
+    touchRef.current = { x: t.clientX, y: t.clientY, atTop, mode: null }
+  }
+
+  const onTouchMove = (e) => {
+    const s = touchRef.current
+    if (!s || refreshing) return
+    const t = e.touches[0]
+    const dx = t.clientX - s.x
+    const dy = t.clientY - s.y
+    if (!s.mode) {
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return
+      s.mode = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y'
+    }
+    if (s.mode === 'y' && s.atTop && dy > 0) {
+      setPull(Math.min(dy * 0.45, 90))
+    }
+  }
+
+  const onTouchEnd = (e) => {
+    const s = touchRef.current
+    touchRef.current = null
+    if (!s || refreshing) {
+      setPull(0)
+      return
+    }
+    const t = e.changedTouches[0]
+    const dx = t.clientX - s.x
+    const dy = t.clientY - s.y
+    const idx = TAB_PATHS.indexOf(location.pathname)
+
+    if (s.mode === 'x' && idx !== -1 && Math.abs(dx) > 60 && Math.abs(dy) < 80) {
+      if (dx < 0 && idx < TAB_PATHS.length - 1) navigate(TAB_PATHS[idx + 1])
+      if (dx > 0 && idx > 0) navigate(TAB_PATHS[idx - 1])
+    }
+
+    if (s.mode === 'y' && s.atTop && dy > 70) {
+      setRefreshing(true)
+      setPull(56)
+      setTimeout(() => window.location.reload(), 350)
+      return
+    }
+    setPull(0)
+  }
+
+  const indicatorH = refreshing ? 56 : pull
+
   return (
     <div className="flex min-h-dvh flex-col">
-      <main className="mx-auto w-full max-w-md flex-1 px-4 pt-2 pb-4">
+      <div
+        className="flex items-end justify-center overflow-hidden bg-app text-brand transition-[height] duration-150"
+        style={{ height: indicatorH }}
+        aria-hidden="true"
+      >
+        {(indicatorH > 12 || refreshing) && (
+          <div className="mb-2 flex items-center gap-2 text-xs font-semibold">
+            <Loader2 className={`size-4 ${refreshing || pull > 60 ? 'animate-spin' : ''}`} />
+            <span>{refreshing || pull > 60 ? 'Refreshing…' : 'Pull to refresh'}</span>
+          </div>
+        )}
+      </div>
+      <main
+        ref={mainRef}
+        className="mx-auto w-full max-w-md flex-1 px-4 pt-2 pb-4"
+        style={{ touchAction: 'pan-y', overscrollBehaviorY: 'contain' }}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        onTouchCancel={() => { touchRef.current = null; setPull(0) }}
+      >
         <Outlet />
       </main>
       <div className="mx-auto w-full max-w-md">
