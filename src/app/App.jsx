@@ -1,8 +1,4 @@
-// src/app/App.jsx
-// Root: session bootstrap, route table, plan guards (SRS §4: switching plans
-// changes every page's context; there is no "all plans" view).
-
-import { useEffect, useMemo } from 'react'
+﻿import { useEffect, useMemo } from 'react'
 import {
   Navigate,
   Outlet,
@@ -14,6 +10,7 @@ import { useSession } from '../store/session.js'
 import { usePlans } from '../store/plan.js'
 import { TabBar } from '../components/ui.jsx'
 import Login from '../screens/Login.jsx'
+import AccountRecovery from '../screens/AccountRecovery.jsx'
 import PlanSelector from '../screens/PlanSelector.jsx'
 import CreatePlan from '../screens/CreatePlan.jsx'
 import Dashboard from '../screens/Dashboard.jsx'
@@ -21,6 +18,18 @@ import Medicines from '../screens/Medicines.jsx'
 import MedicineForm from '../screens/MedicineForm.jsx'
 import Schedule from '../screens/Schedule.jsx'
 import Settings from '../screens/Settings.jsx'
+import PatientProfile from '../screens/PatientProfile.jsx'
+import Members from '../screens/Members.jsx'
+import Inventory from '../screens/Inventory.jsx'
+import StockReceipt from '../screens/StockReceipt.jsx'
+import StockAdjust from '../screens/StockAdjust.jsx'
+import Purchases from '../screens/Purchases.jsx'
+import PurchaseDetails from '../screens/PurchaseDetails.jsx'
+import Transfers from '../screens/Transfers.jsx'
+import Notifications from '../screens/Notifications.jsx'
+import NotificationPreferences from '../screens/NotificationPreferences.jsx'
+import SyncStatus from '../screens/SyncStatus.jsx'
+import AuditHistory from '../screens/AuditHistory.jsx'
 
 function Splash() {
   return (
@@ -87,6 +96,7 @@ export default function App() {
           children: [
             { index: true, element: <HomeRedirect /> },
             { path: 'login', element: <Login /> },
+            { path: 'recover', element: <AccountRecovery /> },
             { path: 'select', element: <PlanSelector /> },
             { path: 'plans/new', element: <CreatePlan /> },
             {
@@ -98,6 +108,18 @@ export default function App() {
                 { path: 'meds/new', element: <MedicineForm /> },
                 { path: 'meds/:medicineId', element: <MedicineForm /> },
                 { path: 'schedule', element: <Schedule /> },
+                { path: 'patient', element: <PatientProfile /> },
+                { path: 'members', element: <Members /> },
+                { path: 'inventory', element: <Inventory /> },
+                { path: 'inventory/receipt', element: <StockReceipt /> },
+                { path: 'inventory/adjust', element: <StockAdjust /> },
+                { path: 'purchases', element: <Purchases /> },
+                { path: 'purchases/:purchaseId', element: <PurchaseDetails /> },
+                { path: 'transfers', element: <Transfers /> },
+                { path: 'notifications', element: <Notifications /> },
+                { path: 'notification-preferences', element: <NotificationPreferences /> },
+                { path: 'sync', element: <SyncStatus /> },
+                { path: 'audit', element: <AuditHistory /> },
                 { path: 'settings', element: <Settings /> },
               ],
             },
