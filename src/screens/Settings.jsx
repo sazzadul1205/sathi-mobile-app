@@ -24,6 +24,11 @@ import {
   readBackupFile,
   restoreBackup,
 } from "../lib/repo/backup.js";
+import {
+  alertError,
+  alertSuccess,
+  confirmDialog,
+} from "../lib/swal.js";
 import { Button, Field, ScreenHeader, Select } from "../components/ui.jsx";
 
 export default function Settings() {
@@ -31,7 +36,6 @@ export default function Settings() {
   const { profile, session, signOut } = useSession();
   const { plans, currentPlanId, deletePlan } = usePlans();
   const [theme, setThemeState] = useState(getStoredTheme() || "teal");
-  const [confirmDelete, setConfirmDelete] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [backupBusy, setBackupBusy] = useState(false);
@@ -54,6 +58,15 @@ export default function Settings() {
   }
 
   async function handleDeletePlan() {
+    const confirmed = await confirmDialog({
+      title: "Delete this plan?",
+      text: "This deletes the plan and all its local data on this device. This cannot be undone.",
+      confirmButtonText: "Delete plan",
+      cancelButtonText: "Cancel",
+      icon: "warning",
+    });
+    if (!confirmed) return;
+
     setBusy(true);
     setError(null);
     try {
@@ -61,8 +74,8 @@ export default function Settings() {
       navigate("/select", { replace: true });
     } catch (err) {
       setError(String(err.message || err));
+      await alertError("Could not delete plan", String(err.message || err));
       setBusy(false);
-      setConfirmDelete(false);
     }
   }
 
@@ -73,8 +86,10 @@ export default function Settings() {
     try {
       await downloadBackup();
       setBackupMessage("Backup downloaded as a JSON file.");
+      await alertSuccess("Backup downloaded", "Your backup file has been saved.");
     } catch (err) {
       setError(String(err.message || err));
+      await alertError("Backup failed", String(err.message || err));
     } finally {
       setBackupBusy(false);
     }
@@ -310,37 +325,13 @@ export default function Settings() {
         {error ? (
           <p className="mb-2 text-xs font-semibold text-missed">{error}</p>
         ) : null}
-        {confirmDelete ? (
-          <div className="rounded-lg border border-missed bg-missed-soft p-3.5">
-            <p className="mb-2.5 text-xs leading-relaxed text-ink-2">
-              <b className="text-ink">
-                Delete this plan and all its local data?
-              </b>{" "}
-              This cannot be undone.
-            </p>
-            <div className="flex gap-2">
-              <Button
-                variant="danger"
-                size="sm"
-                onClick={handleDeletePlan}
-                disabled={busy}
-              >
-                {busy ? "Deleting…" : "Delete plan"}
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setConfirmDelete(false)}
-              >
-                Cancel
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <Button variant="danger" onClick={() => setConfirmDelete(true)}>
-            Delete this plan
-          </Button>
-        )}
+        <Button
+          variant="danger"
+          onClick={handleDeletePlan}
+          disabled={busy}
+        >
+          {busy ? "Deleting…" : "Delete this plan"}
+        </Button>
 
         <p className="mt-6 text-center text-[11px] leading-relaxed text-muted">
           Sathi — care coordination. Runs standalone on this device; connects to

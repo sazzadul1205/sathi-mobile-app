@@ -31,7 +31,7 @@ function mealLabel(rel) {
 
 export default function Schedule() {
   const { currentPlanId, context } = usePlans();
-  const { load: loadMedicines } = useMedicines();
+  const { load: loadMedicines, medicines } = useMedicines();
   const { profile } = useSession();
   const [slots, setSlots] = useState(null);
   const [filter, setFilter] = useState("all");
@@ -48,16 +48,13 @@ export default function Schedule() {
     if (!currentPlanId) return;
     const db = await getPlanDb(currentPlanId);
     await loadMedicines();
-    const medicines = (
-      await import("../store/medicines.js")
-    ).useMedicines.getState().medicines;
     setSlots(
       await listSlots(db, {
         medicines,
         patient: usePlans.getState().context?.patient,
       }),
     );
-  }, [currentPlanId, loadMedicines]);
+  }, [currentPlanId, loadMedicines, medicines]);
 
   useEffect(() => {
     let cancelled = false;

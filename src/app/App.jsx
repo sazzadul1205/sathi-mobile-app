@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useRef, useState } from 'react'
+﻿import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Navigate,
   Outlet,
@@ -12,26 +12,27 @@ import { useSession } from '../store/session.js'
 import { usePlans } from '../store/plan.js'
 import { TabBar } from '../components/ui.jsx'
 import Login from '../screens/Login.jsx'
-import AccountRecovery from '../screens/AccountRecovery.jsx'
-import PlanSelector from '../screens/PlanSelector.jsx'
-import CreatePlan from '../screens/CreatePlan.jsx'
-import Dashboard from '../screens/Dashboard.jsx'
-import Medicines from '../screens/Medicines.jsx'
-import MedicineForm from '../screens/MedicineForm.jsx'
-import Schedule from '../screens/Schedule.jsx'
-import Settings from '../screens/Settings.jsx'
-import PatientProfile from '../screens/PatientProfile.jsx'
-import Members from '../screens/Members.jsx'
-import Inventory from '../screens/Inventory.jsx'
-import StockReceipt from '../screens/StockReceipt.jsx'
-import StockAdjust from '../screens/StockAdjust.jsx'
-import Purchases from '../screens/Purchases.jsx'
-import PurchaseDetails from '../screens/PurchaseDetails.jsx'
-import Transfers from '../screens/Transfers.jsx'
-import Notifications from '../screens/Notifications.jsx'
-import NotificationPreferences from '../screens/NotificationPreferences.jsx'
-import SyncStatus from '../screens/SyncStatus.jsx'
-import AuditHistory from '../screens/AuditHistory.jsx'
+
+const AccountRecovery = lazy(() => import('../screens/AccountRecovery.jsx'))
+const PlanSelector = lazy(() => import('../screens/PlanSelector.jsx'))
+const CreatePlan = lazy(() => import('../screens/CreatePlan.jsx'))
+const Dashboard = lazy(() => import('../screens/Dashboard.jsx'))
+const Medicines = lazy(() => import('../screens/Medicines.jsx'))
+const MedicineForm = lazy(() => import('../screens/MedicineForm.jsx'))
+const Schedule = lazy(() => import('../screens/Schedule.jsx'))
+const Settings = lazy(() => import('../screens/Settings.jsx'))
+const PatientProfile = lazy(() => import('../screens/PatientProfile.jsx'))
+const Members = lazy(() => import('../screens/Members.jsx'))
+const Inventory = lazy(() => import('../screens/Inventory.jsx'))
+const StockReceipt = lazy(() => import('../screens/StockReceipt.jsx'))
+const StockAdjust = lazy(() => import('../screens/StockAdjust.jsx'))
+const Purchases = lazy(() => import('../screens/Purchases.jsx'))
+const PurchaseDetails = lazy(() => import('../screens/PurchaseDetails.jsx'))
+const Transfers = lazy(() => import('../screens/Transfers.jsx'))
+const Notifications = lazy(() => import('../screens/Notifications.jsx'))
+const NotificationPreferences = lazy(() => import('../screens/NotificationPreferences.jsx'))
+const SyncStatus = lazy(() => import('../screens/SyncStatus.jsx'))
+const AuditHistory = lazy(() => import('../screens/AuditHistory.jsx'))
 
 function Splash() {
   return (
@@ -211,5 +212,9 @@ export default function App() {
       ]),
     [],
   )
-  return <RouterProvider router={router} />
+  return (
+    <Suspense fallback={<Splash />}>
+      <RouterProvider router={router} />
+    </Suspense>
+  )
 }
