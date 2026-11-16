@@ -64,7 +64,11 @@ describe('medicines', () => {
       { name: 'Metformin 500 mg', times: '8:00 AM, 1:00 PM, 9:00 PM', lowStockThreshold: 6 },
       { planId, recordedBy: profile.id },
     )
-    expect(medicine.times).toEqual(['08:00', '13:00', '21:00'])
+    expect(medicine.times).toEqual([
+      { time: '08:00', quantity: 1, mealRelation: '' },
+      { time: '13:00', quantity: 1, mealRelation: '' },
+      { time: '21:00', quantity: 1, mealRelation: '' },
+    ])
     expect(medicine.syncState).toBe('pending')
     const active = await listMedicines(db)
     expect(active).toHaveLength(1)

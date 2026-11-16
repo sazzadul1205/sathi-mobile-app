@@ -53,7 +53,7 @@ export default function MedicineForm() {
       notes: "",
     },
   })
-
+  // eslint-disable-next-line react-hooks/incompatible-library -- react-hook-form watch is intentionally used for live form state
   const stockUnit = watch("stockUnit") || "tablet"
   const existing = isEdit ? medicines.find((m) => m.id === medicineId) : null
 
