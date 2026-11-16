@@ -33,7 +33,9 @@ export default function SyncStatus() {
       <ScreenHeader title="Offline sync status" subtitle={`Pending ${pending} · conflicts ${conflicts}`} backTo />
       <Card className="mb-3">
         <div className="flex items-center justify-between"><div className="text-sm font-bold">Standalone local mode</div><StatusPill tone="pending">No server</StatusPill></div>
-        <p className="mt-2 text-xs leading-relaxed text-muted">This device stores care events locally in IndexedDB. When a backend is connected, queued events sync with idempotent event IDs; conflicts are flagged for review and never applied silently (FR-80/81/82).</p>
+        <p className="mt-2 text-xs leading-relaxed text-muted">
+          This device stores care events locally in IndexedDB. When a backend is connected, queued events sync with idempotent event IDs; conflicts are flagged for review and never applied silently (FR-80/81/82). Sync payloads are sealed with the device key before transport and only unsealed inside the app.
+        </p>
       </Card>
       <div className="space-y-2">
         {queue.slice(0, 30).map((q, i) => (
