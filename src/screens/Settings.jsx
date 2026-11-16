@@ -1,16 +1,16 @@
-﻿import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { Bell, ClipboardList, LogOut, MapPin, Palette, RefreshCw, ShieldCheck, ShoppingCart, Trash2, Truck, Users, Wallet, WifiOff } from 'lucide-react'
-import { useSession } from '../store/session.js'
-import { usePlans } from '../store/plan.js'
-import { availableThemes, getStoredTheme, setTheme } from '../theme.js'
-import { Button, Field, ScreenHeader, Select } from '../components/ui.jsx'
+﻿import { useState } from "react"
+import { Link, useNavigate } from "react-router-dom"
+import { Bell, ClipboardList, LogOut, MapPin, Palette, RefreshCw, ShieldCheck, ShoppingCart, Trash2, Truck, Users, WifiOff } from "lucide-react"
+import { useSession } from "../store/session.js"
+import { usePlans } from "../store/plan.js"
+import { availableThemes, getStoredTheme, setTheme } from "../theme.js"
+import { Button, Field, ScreenHeader, Select } from "../components/ui.jsx"
 
 export default function Settings() {
   const navigate = useNavigate()
   const { profile, session, signOut } = useSession()
   const { plans, currentPlanId, deletePlan } = usePlans()
-  const [theme, setThemeState] = useState(getStoredTheme() || 'teal')
+  const [theme, setThemeState] = useState(getStoredTheme() || "teal")
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
@@ -25,7 +25,7 @@ export default function Settings() {
   async function handleSignOut() {
     setBusy(true)
     await signOut()
-    navigate('/login', { replace: true })
+    navigate("/login", { replace: true })
   }
 
   async function handleDeletePlan() {
@@ -33,7 +33,7 @@ export default function Settings() {
     setError(null)
     try {
       await deletePlan(currentPlanId)
-      navigate('/select', { replace: true })
+      navigate("/select", { replace: true })
     } catch (err) {
       setError(String(err.message || err))
       setBusy(false)
@@ -42,15 +42,15 @@ export default function Settings() {
   }
 
   const links = [
-    { to: '/plan/patient', label: 'Patient profile', icon: MapPin },
-    { to: '/plan/members', label: 'Members & permissions', icon: Users },
-    { to: '/plan/inventory', label: 'Inventory', icon: ClipboardList },
-    { to: '/plan/purchases', label: 'Purchases', icon: ShoppingCart },
-    { to: '/plan/transfers', label: 'Transfers', icon: Truck },
-    { to: '/plan/notifications', label: 'Notifications & activity', icon: Bell },
-    { to: '/plan/notification-preferences', label: 'Notification preferences', icon: Bell },
-    { to: '/plan/sync', label: 'Offline sync status', icon: RefreshCw },
-    { to: '/plan/audit', label: 'Audit history', icon: ShieldCheck },
+    { to: "/plan/patient", label: "Patient profile", icon: MapPin },
+    { to: "/plan/members", label: "Members & permissions", icon: Users },
+    { to: "/plan/inventory", label: "Inventory", icon: ClipboardList },
+    { to: "/plan/purchases", label: "Purchases", icon: ShoppingCart },
+    { to: "/plan/transfers", label: "Transfers", icon: Truck },
+    { to: "/plan/notifications", label: "Notifications & activity", icon: Bell },
+    { to: "/plan/notification-preferences", label: "Notification preferences", icon: Bell },
+    { to: "/plan/sync", label: "Offline sync status", icon: RefreshCw },
+    { to: "/plan/audit", label: "Audit history", icon: ShieldCheck },
   ]
 
   return (
@@ -94,8 +94,8 @@ export default function Settings() {
 
         <h3 className="mb-2 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-muted"><ShieldCheck className="size-3.5" /> Offline authorization</h3>
         <div className="mb-4 rounded-lg border border-line bg-card p-3.5">
-          <div className="flex items-center justify-between gap-2 text-xs"><span className="font-semibold">Signed in since</span><span className="text-muted">{session ? new Date(session.signedInAt).toLocaleString() : '—'}</span></div>
-          <div className="mt-2 flex items-center justify-between gap-2 text-xs"><span className="font-semibold">Sensitive actions expire</span><span className="text-muted">{session ? new Date(session.offlineAuthExpiresAt).toLocaleString() : '—'}</span></div>
+          <div className="flex items-center justify-between gap-2 text-xs"><span className="font-semibold">Signed in since</span><span className="text-muted">{session ? new Date(session.signedInAt).toLocaleString() : "—"}</span></div>
+          <div className="mt-2 flex items-center justify-between gap-2 text-xs"><span className="font-semibold">Sensitive actions expire</span><span className="text-muted">{session ? new Date(session.offlineAuthExpiresAt).toLocaleString() : "—"}</span></div>
           <p className="mt-2.5 flex items-start gap-1.5 text-[11px] leading-relaxed text-muted"><WifiOff className="mt-0.5 size-3.5 flex-none" />Recording doses and stock changes needs fresh authorization every 24 h while offline. Reconnecting renews it.</p>
         </div>
 
@@ -111,7 +111,7 @@ export default function Settings() {
           <div className="rounded-lg border border-missed bg-missed-soft p-3.5">
             <p className="mb-2.5 text-xs leading-relaxed text-ink-2"><b className="text-ink">Delete this plan and all its local data?</b> This cannot be undone.</p>
             <div className="flex gap-2">
-              <Button variant="danger" size="sm" onClick={handleDeletePlan} disabled={busy}>{busy ? 'Deleting…' : 'Delete plan'}</Button>
+              <Button variant="danger" size="sm" onClick={handleDeletePlan} disabled={busy}>{busy ? "Deleting…" : "Delete plan"}</Button>
               <Button variant="secondary" size="sm" onClick={() => setConfirmDelete(false)}>Cancel</Button>
             </div>
           </div>
@@ -126,5 +126,5 @@ export default function Settings() {
 }
 
 function initials(name) {
-  return String(name || '?').split(' ').map((part) => part[0]).slice(0, 2).join('').toUpperCase()
+  return String(name || "?").split(" ").map((part) => part[0]).slice(0, 2).join("").toUpperCase()
 }

@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react"
+﻿import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { getPlanDb, usePlans } from "../store/plan.js"
 import { useMedicines } from "../store/medicines.js"
@@ -15,13 +15,8 @@ export default function StockAdjust() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
 
-  useEffect(() => {
-    setForm((f) => ({
-      ...f,
-      medicineId: f.medicineId || medicines[0]?.id || "",
-      locationId: f.locationId || context?.locations?.[0]?.id || "",
-    }))
-  }, [medicines, context])
+  const medicineId = form.medicineId || medicines[0]?.id || ""
+  const locationId = form.locationId || context?.locations?.[0]?.id || ""
 
   if (status === "loading" || !context) return <Loading />
 
@@ -33,8 +28,8 @@ export default function StockAdjust() {
     await addMovement(
       db,
       {
-        medicineId: form.medicineId,
-        locationId: form.locationId,
+        medicineId,
+        locationId,
         type: "adjustment",
         quantity: Number(form.quantity) || 0,
         reason: `${form.reason}${form.note ? ` — ${form.note}` : ""}`,
@@ -51,12 +46,12 @@ export default function StockAdjust() {
       <ScreenHeader title="Adjust / dispose stock" subtitle="Reason required · append-only" backTo />
       <form onSubmit={submit} className="rounded-lg border border-line bg-card p-4 shadow-1">
         <Field label="Medicine">
-          <Select value={form.medicineId} onChange={(e) => setForm({ ...form, medicineId: e.target.value })}>
+          <Select value={medicineId} onChange={(e) => setForm({ ...form, medicineId: e.target.value })}>
             {medicines.map((m) => <option key={m.id} value={m.id}>{m.name} {m.strength}</option>)}
           </Select>
         </Field>
         <Field label="Location">
-          <Select value={form.locationId} onChange={(e) => setForm({ ...form, locationId: e.target.value })}>
+          <Select value={locationId} onChange={(e) => setForm({ ...form, locationId: e.target.value })}>
             {(context.locations || []).map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
           </Select>
         </Field>

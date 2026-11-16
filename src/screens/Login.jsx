@@ -1,16 +1,16 @@
-﻿import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { Heart, Plus } from 'lucide-react'
-import { useSession } from '../store/session.js'
-import { createProfile, listProfiles } from '../lib/repo/app.js'
-import { Button, Field, TextInput } from '../components/ui.jsx'
-import { useEffect } from 'react'
+﻿import { useEffect, useState } from "react"
+import { Link, useNavigate } from "react-router-dom"
+import { Heart, Plus } from "lucide-react"
+import { useSession } from "../store/session.js"
+import { createProfile, listProfiles } from "../lib/repo/app.js"
+import { Button, Field, TextInput } from "../components/ui.jsx"
 
 export default function Login() {
+  const navigate = useNavigate()
   const { signIn } = useSession()
   const [profiles, setProfiles] = useState([])
-  const [mode, setMode] = useState('choose')
-  const [form, setForm] = useState({ name: '', email: '' })
+  const [mode, setMode] = useState("choose")
+  const [form, setForm] = useState({ name: "", email: "" })
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
 
@@ -24,7 +24,7 @@ export default function Login() {
 
   async function handleContinue(profile) {
     await signIn(profile)
-    window.location.hash = '#/select'
+    navigate("/select", { replace: true })
   }
 
   async function handleCreate(event) {
@@ -34,7 +34,7 @@ export default function Login() {
     try {
       const profile = await createProfile(form)
       await signIn(profile)
-      window.location.hash = '#/select'
+      navigate("/select", { replace: true })
     } catch (err) {
       setError(String(err.message || err))
     } finally {
@@ -53,7 +53,7 @@ export default function Login() {
           Coordinate medication, inventory, purchases and transport for a shared care plan
         </p>
 
-        {mode === 'choose' ? (
+        {mode === "choose" ? (
           <>
             {profiles.length > 0 ? (
               <div className="mb-4 space-y-2">
@@ -79,7 +79,7 @@ export default function Login() {
                 No device profile yet. Create one — it stays on this device and needs no internet connection.
               </div>
             )}
-            <Button type="button" onClick={() => setMode('create')}>
+            <Button type="button" onClick={() => setMode("create")}>
               <Plus className="size-4" /> New device profile
             </Button>
             <div className="mt-3 text-center">
@@ -95,8 +95,8 @@ export default function Login() {
               <TextInput type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="you@example.com" required />
             </Field>
             {error ? <p className="mb-3 text-xs font-semibold text-missed">{error}</p> : null}
-            <Button type="submit" disabled={busy}>{busy ? 'Creating…' : 'Create profile'}</Button>
-            <Button type="button" variant="secondary" className="mt-2" onClick={() => { setMode('choose'); setError(null) }}>Back</Button>
+            <Button type="submit" disabled={busy}>{busy ? "Creating…" : "Create profile"}</Button>
+            <Button type="button" variant="secondary" className="mt-2" onClick={() => { setMode("choose"); setError(null) }}>Back</Button>
           </form>
         )}
 
@@ -109,5 +109,5 @@ export default function Login() {
 }
 
 function initials(name) {
-  return String(name || '?').split(' ').map((part) => part[0]).slice(0, 2).join('').toUpperCase()
+  return String(name || "?").split(" ").map((part) => part[0]).slice(0, 2).join("").toUpperCase()
 }

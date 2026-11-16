@@ -1,4 +1,4 @@
-﻿import { makeCollection, createRecord, newId, nowIso } from '../db/index.js'
+﻿import { makeCollection, createRecord, nowIso } from '../db/index.js'
 
 export async function listPurchases(db) {
   const items = await makeCollection(db, 'purchases').getAll()

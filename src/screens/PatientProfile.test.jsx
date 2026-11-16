@@ -1,6 +1,6 @@
 ﻿import "fake-indexeddb/auto"
 import { beforeEach, describe, expect, it } from "vitest"
-import { render, screen, waitFor } from "@testing-library/react"
+import { render, screen } from "@testing-library/react"
 import { MemoryRouter } from "react-router-dom"
 import PatientProfile from "./PatientProfile.jsx"
 import { activatePlan, resetAppDb, resetStores, seedPlan, signInStore } from "../test/seed.js"

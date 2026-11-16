@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useState } from "react"
+﻿import { useEffect, useState } from "react"
 import { getPlanDb, usePlans } from "../store/plan.js"
 import { useSession } from "../store/session.js"
 import { makeCollection, newId, nowIso } from "../lib/db/index.js"
@@ -11,15 +11,18 @@ export default function PatientProfile() {
   const [form, setForm] = useState({ name: "", location: "Dhaka", notes: "" })
   const [busy, setBusy] = useState(false)
 
-  const load = useCallback(async () => {
-    if (!currentPlanId) return
-    const db = await getPlanDb(currentPlanId)
-    const [p] = await makeCollection(db, "patient").getAll()
-    setPatient(p)
-    if (p) setForm({ name: p.name || "", location: p.location || "Dhaka", notes: p.notes || "" })
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      if (!currentPlanId) return
+      const db = await getPlanDb(currentPlanId)
+      const [p] = await makeCollection(db, "patient").getAll()
+      if (cancelled) return
+      setPatient(p)
+      if (p) setForm({ name: p.name || "", location: p.location || "Dhaka", notes: p.notes || "" })
+    })()
+    return () => { cancelled = true }
   }, [currentPlanId])
-
-  useEffect(() => { load() }, [load])
 
   async function save(e) {
     e.preventDefault()
@@ -37,8 +40,8 @@ export default function PatientProfile() {
       recordedBy: profile?.id || "device",
       createdAt: nowIso(),
     })
+    setPatient(next)
     setBusy(false)
-    await load()
   }
 
   if (!context || !patient) return <Loading />
