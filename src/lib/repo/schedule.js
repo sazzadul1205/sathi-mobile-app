@@ -36,9 +36,14 @@ export async function listSlots(db, { medicines, patient, date = new Date() } = 
           }
       if (!t.time) continue
       const id = slotId(medicine.id, date, t.time)
-      const existing = records.find((r) => r.slotId === id && r.kind !== 'correction')
-      const qty = existing?.doseQuantity ?? t.quantity ?? medicine.doseQuantity ?? 1
-      const mealRelation = existing?.mealRelation ?? t.mealRelation ?? ''
+      const slotRecords = records.filter((r) => r.slotId === id)
+      const initial = slotRecords.find((r) => r.kind !== 'correction') || null
+      const corrections = slotRecords
+        .filter((r) => r.kind === 'correction')
+        .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
+      const effective = corrections[0] || initial
+      const qty = effective?.doseQuantity ?? initial?.doseQuantity ?? t.quantity ?? medicine.doseQuantity ?? 1
+      const mealRelation = effective?.mealRelation ?? initial?.mealRelation ?? t.mealRelation ?? ''
       slots.push({
         id,
         medicineId: medicine.id,
@@ -51,8 +56,8 @@ export async function listSlots(db, { medicines, patient, date = new Date() } = 
         instructions: medicine.instructions,
         mealRelation,
         patientLocation: patient?.location || null,
-        outcome: existing?.outcome || null,
-        record: existing || null,
+        outcome: effective?.outcome || null,
+        record: initial || null,
       })
     }
   }
