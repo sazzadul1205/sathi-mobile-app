@@ -1,4 +1,4 @@
-﻿import { useState } from "react"
+﻿import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { getPlanDb, usePlans } from "../store/plan.js"
 import { useMedicines } from "../store/medicines.js"
@@ -15,6 +15,10 @@ export default function StockAdjust() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
 
+  useEffect(() => {
+    if (currentPlanId) load()
+  }, [currentPlanId, load])
+
   const medicineId = form.medicineId || medicines[0]?.id || ""
   const locationId = form.locationId || context?.locations?.[0]?.id || ""
 
@@ -27,13 +31,7 @@ export default function StockAdjust() {
     const db = await getPlanDb(currentPlanId)
     await addMovement(
       db,
-      {
-        medicineId,
-        locationId,
-        type: "adjustment",
-        quantity: Number(form.quantity) || 0,
-        reason: `${form.reason}${form.note ? ` — ${form.note}` : ""}`,
-      },
+      { medicineId, locationId, type: "adjustment", quantity: Number(form.quantity) || 0, reason: `${form.reason}${form.note ? ` — ${form.note}` : ""}` },
       { planId: currentPlanId, recordedBy: profile?.id || "device" },
     )
     await load()
@@ -68,6 +66,7 @@ export default function StockAdjust() {
         <p className="mb-3 text-[11px] text-muted">Every adjustment is audited with user, time and reason. History is never overwritten (BR-09/FR-41).</p>
         <Button type="submit" disabled={busy || medicines.length === 0}>{busy ? "Saving…" : "Save adjustment"}</Button>
       </form>
+      {medicines.length === 0 ? <p className="mt-3 text-xs text-muted">Add a medicine first.</p> : null}
     </div>
   )
 }
