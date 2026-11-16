@@ -2,7 +2,7 @@
 // Runtime controller for the modular color template system.
 // Themes live in src/styles/themes/*.css and are activated via <html data-theme>.
 
-export const availableThemes = ['teal', 'ocean', 'sage', 'dark']
+export const availableThemes = ['teal', 'ocean', 'sage', 'rose', 'sunset', 'lavender', 'dark', 'slate']
 
 const STORAGE_KEY = 'sathi-theme'
 

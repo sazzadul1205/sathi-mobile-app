@@ -1,0 +1,61 @@
+﻿/* Sathi design tokens — "rose" variant (warm rose/pink) */
+[data-theme='rose'] {
+  /* surfaces */
+  --t-bg: #f8f1f3;
+  --t-app: #fdf8f9;
+  --t-card: #ffffff;
+  --t-line: #ecdde2;
+  --t-line-2: #f4eaed;
+
+  /* text */
+  --t-ink: #26151b;
+  --t-ink-2: #5a3e48;
+  --t-muted: #917882;
+
+  /* brand */
+  --t-brand: #b04a6a;
+  --t-brand-dk: #863650;
+  --t-brand-soft: #f7e6ec;
+  --t-brand-gradient-from: #c85d7e;
+  --t-brand-gradient-to: #863650;
+
+  /* status: given */
+  --t-given: #1f8a63;
+  --t-given-soft: #e5f5ee;
+
+  /* status: missed */
+  --t-missed: #c23b3b;
+  --t-missed-soft: #fdecec;
+
+  /* status: refused */
+  --t-refused: #c67a10;
+  --t-refused-soft: #fff3e3;
+
+  /* status: other */
+  --t-other: #6f5ca8;
+  --t-other-soft: #eeebf8;
+
+  /* status: pending */
+  --t-pending: #9a8890;
+  --t-pending-soft: #f3eff1;
+
+  /* status: transit */
+  --t-transit: #3a6fb0;
+  --t-transit-soft: #e9f1fb;
+
+  /* status: sync */
+  --t-sync: #b56f0a;
+  --t-sync-soft: #fff4e2;
+
+  /* status: warn */
+  --t-warn: #9a6200;
+  --t-warn-soft: #fff4e2;
+
+  /* status: danger */
+  --t-danger: #bf3a3a;
+  --t-danger-soft: #fdecec;
+
+  /* role: admin */
+  --t-admin: #4457b8;
+  --t-admin-soft: #ebefff;
+}

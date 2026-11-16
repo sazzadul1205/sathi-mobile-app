@@ -45,7 +45,7 @@ export default function Login() {
   return (
     <div className="flex min-h-dvh flex-col px-5 py-8">
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center">
-        <div className="mb-6 mx-auto grid size-16 place-items-center rounded-2xl bg-gradient-to-br from-brand-gradient-from to-brand-gradient-to text-white shadow-2">
+        <div className="mb-6 mx-auto grid size-16 place-items-center rounded-2xl bg-linear-to-br from-brand-gradient-from to-brand-gradient-to text-white shadow-2">
           <Heart className="size-7" />
         </div>
         <h1 className="text-center text-2xl font-bold tracking-tight">Welcome to Sathi</h1>

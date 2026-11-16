@@ -4,22 +4,22 @@ A React + Vite progressive web app for coordinating medication, inventory, purch
 
 ## Scripts
 
-| Script | Description |
-| --- | --- |
-| `npm run dev` | Start the Vite dev server (PWA service worker enabled) |
-| `npm run build` | Production build, including service worker + manifest (`dist/`) |
-| `npm run preview` | Preview the production build locally |
-| `npm run lint` | Run ESLint |
-| `npm test` | Run unit + component tests once (Vitest) |
-| `npm run test:watch` | Run Vitest in watch mode |
-| `npm run test:e2e` | Run end-to-end browser tests (Playwright + Chromium) |
-| `npm run test:e2e:ui` | Open the Playwright UI runner |
-| `npm run test:all` | Run Vitest, then Playwright |
-| `npm run generate:icons` | Regenerate the PWA icon set from the inline SVG source |
+| Script                   | Description                                                     |
+| ------------------------ | --------------------------------------------------------------- |
+| `npm run dev`            | Start the Vite dev server (PWA service worker enabled)          |
+| `npm run build`          | Production build, including service worker + manifest (`dist/`) |
+| `npm run preview`        | Preview the production build locally                            |
+| `npm run lint`           | Run ESLint                                                      |
+| `npm test`               | Run unit + component tests once (Vitest)                        |
+| `npm run test:watch`     | Run Vitest in watch mode                                        |
+| `npm run test:e2e`       | Run end-to-end browser tests (Playwright + Chromium)            |
+| `npm run test:e2e:ui`    | Open the Playwright UI runner                                   |
+| `npm run test:all`       | Run Vitest, then Playwright                                     |
+| `npm run generate:icons` | Regenerate the PWA icon set from the inline SVG source          |
 
 ## App structure
 
-```
+```txt
 src/
   app/         root router, session/plan guards, tab-bar shell
   screens/     Login, AccountRecovery, PlanSelector, CreatePlan, Dashboard,
@@ -73,7 +73,7 @@ src/
 
 ## Testing & CI/CD
 
-- **Unit/component (Vitest + Testing Library, jsdom):** DB/repo/domain logic and screen/component behavior against real repos on fake-indexeddb; manifest/icon and theme-contract tests.
+- **Unit/component (Vitest + Testing Library, jsdom):** DB/repo/domain logic and screen/component behavior against real repos on fake-indexed-db; manifest/icon and theme-contract tests.
 - **End-to-end (Playwright, Chromium):** routing guards, core care flow (sign in → create plan → add medicine with per-dose qty/meal → record/correct dose → sign out), rendering of core/care-management pages, sync security copy, and session/recovery checks. Specs live in `e2e/`.
 - **Pre-push hook:** `simple-git-hooks` runs `npm run lint && npm test` (installed on `npm install`). Escape hatch (not recommended): `SKIP_SIMPLE_GIT_HOOKS=1 git push`.
 - **CI:** `.github/workflows/ci.yml` runs lint/test/build on push/PR and a separate Playwright e2e job with report upload.

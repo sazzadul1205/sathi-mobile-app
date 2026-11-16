@@ -48,7 +48,7 @@ export default function Dashboard() {
       <div className="pb-3 text-xs text-muted">{format(new Date(), "EEEE, d MMMM")}</div>
       <SyncStrip pending={pendingSync} />
 
-      <Link to="/plan/patient" className="relative mb-3 block overflow-hidden rounded-xl bg-gradient-to-br from-brand-gradient-from to-brand-gradient-to p-4.5 text-white shadow-2">
+      <Link to="/plan/patient" className="relative mb-3 block overflow-hidden rounded-xl bg-linear-to-br from-brand-gradient-from to-brand-gradient-to p-4.5 text-white shadow-2">
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="text-[11px] font-bold uppercase tracking-wider text-white/70">Active care plan</div>

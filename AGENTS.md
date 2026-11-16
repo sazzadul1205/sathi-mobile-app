@@ -27,15 +27,15 @@ with approved offline recording and queued sync.
 
 ## Commands
 
-| Command | Purpose |
-| --- | --- |
-| `npm run dev` | Dev server (PWA service worker active) |
-| `npm run build` | Production build incl. service worker + manifest |
-| `npm run preview` | Preview the production build |
-| `npm run lint` | ESLint (must be clean) |
-| `npm test` | Vitest unit + component tests (must pass) |
-| `npm run test:e2e` | Playwright end-to-end tests (Chromium) |
-| `npm run generate:icons` | Regenerate the PWA icon set |
+| Command                  | Purpose                                          |
+| ------------------------ | ------------------------------------------------ |
+| `npm run dev`            | Dev server (PWA service worker active)           |
+| `npm run build`          | Production build incl. service worker + manifest |
+| `npm run preview`        | Preview the production build                     |
+| `npm run lint`           | ESLint (must be clean)                           |
+| `npm test`               | Vitest unit + component tests (must pass)        |
+| `npm run test:e2e`       | Playwright end-to-end tests (Chromium)           |
+| `npm run generate:icons` | Regenerate the PWA icon set                      |
 
 Verification is mandatory before finishing any change: `npm run lint && npm test`
 (the pre-push hook enforces this too) plus `npm run build` for anything touching

@@ -35,7 +35,7 @@ function Splash() {
   return (
     <div className="grid min-h-dvh place-items-center">
       <div className="flex flex-col items-center gap-3 text-muted">
-        <span className="grid size-14 place-items-center rounded-2xl bg-gradient-to-br from-brand-gradient-from to-brand-gradient-to text-white">
+        <span className="grid size-14 place-items-center rounded-2xl bg-linear-to-br from-brand-gradient-from to-brand-gradient-to text-white">
           <Heart className="size-6" />
         </span>
         <span className="text-sm">Loading…</span>

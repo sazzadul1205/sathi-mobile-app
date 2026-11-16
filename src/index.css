@@ -3,7 +3,11 @@
 @import "./styles/themes/default.css";
 @import "./styles/themes/ocean.css";
 @import "./styles/themes/sage.css";
+@import "./styles/themes/rose.css";
+@import "./styles/themes/sunset.css";
+@import "./styles/themes/lavender.css";
 @import "./styles/themes/dark.css";
+@import "./styles/themes/slate.css";
 
 /* Semantic color tokens.
  * `inline` keeps utilities referencing var(--t-*) at runtime, so switching the
