@@ -17,6 +17,17 @@ export async function getPlanDb(planId) {
   return dbCache.get(planId)
 }
 
+export async function closeAllPlanDbs() {
+  for (const db of dbCache.values()) {
+    try {
+      db.close()
+    } catch {
+      // ignore
+    }
+  }
+  dbCache.clear()
+}
+
 export const usePlans = create((set, get) => ({
   status: 'loading', // loading | ready | empty
   plans: [],
