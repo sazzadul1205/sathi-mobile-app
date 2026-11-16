@@ -95,7 +95,7 @@ describe("Schedule", () => {
     );
 
     await waitFor(() => {
-      expect(within(morningCard()).getByText("given")).toBeInTheDocument();
+      expect(within(morningCard()).getByText("Given")).toBeInTheDocument();
     });
 
     await waitFor(async () => {
