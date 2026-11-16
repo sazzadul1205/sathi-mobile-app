@@ -1,60 +1,44 @@
-# Frontend Status — What Is Implemented
+﻿# Frontend Status — What Is Implemented
 
-Honest scope statement for the current build. "Standalone offline" is fully
-real; the server-connected scope is not, because the backend does not exist yet
-(planned as a separate ASP.NET Core service per the SRS).
+Honest scope statement for the current build. "Standalone offline" is real (local-first IndexedDB, PWA shell). Server-connected/shared-authority scope is **not** complete because the backend does not exist yet (planned as a separate ASP.NET Core service per SRS).
+
+**Verification snapshot:** `npm run lint` clean, `npm test` passing (Vitest), and Playwright e2e passing (`5` tests covering guards, core care flow, and authenticated page rendering). Re-run `npm run build`, `npm test`, and `npm run test:e2e` before release/push as the authoritative gate.
 
 ---
 
-## Implemented and verified (this repo)
+## Implemented (local-first, this repo)
 
 | Area | Detail | Verified by |
 | --- | --- | --- |
-| App shell + routing | Hash router, session guard, plan guard (SRS §4), 4-tab nav | `src/app/App.test.jsx` |
-| Local auth | Device profiles (no shared credentials, SRS §3), 24 h offline authorization (FR-73/74) | `src/screens/Login.test.jsx` |
-| Care plans | Create plan (patient + default locations + owner + audit, BR-01), selector, delete (wipe = SR-13) | `src/lib/repo/repo.test.js` |
-| Dashboard | Plan card, dose summary (given/remaining/missed), upcoming doses, low-stock alerts (BR-18), quick actions | repo + component tests |
-| Medicines | CRUD, manual instructions only (BR-15), strengths as separate rows (FR-15), low-stock threshold | repo tests |
-| Stock ledger | Receipts / consumption / adjustments as append-only movements; totals derived (BR-05/06, FR-41/42) | repo tests |
-| Schedule + dose recording | Time-derived slots, outcomes (given/missed/refused/other), `given` reduces stock (BR-05), corrections append-only with reason (FR-26/27) | repo tests |
-| Sync-readiness | Every record carries the envelope (eventId/eventTime/arrivalTime/syncState/serverId/revision); syncQueue store keyed by eventId (FR-79/80) | `src/lib/db/db.test.js` |
+| App shell + routing | Hash router, session/plan guards, tab shell, routes for core and care-management screens | `src/app/App.test.jsx`, `e2e/app.spec.js` |
+| Local auth/profile | Device profiles (no shared credentials), sign in/out, 24h offline authorization model, recovery screen (local guidance) | `src/screens/Login.test.jsx`, `src/screens/AccountRecovery.test.jsx`, e2e |
+| Care plans | Create/select/delete plan, bootstrap patient/default locations/owner context, local wipe semantics | `src/lib/repo/repo.test.js`, plan screens/tests |
+| Dashboard | Plan/patient context, dose summary/upcoming doses, low-stock alerts, quick actions | screen/repo tests, e2e |
+| Medicines | CRUD, manual instructions only, separate strengths, low-stock threshold, dynamic dose times with per-dose quantity and meal timing (before/after/with/unspecified) | `src/lib/repo/repo.test.js`, `src/screens/MedicineForm.test.jsx`, `src/screens/Medicines.test.jsx`, e2e |
+| Schedule + dose recording | Derived slots from medicine times (per-dose qty/meal), outcomes given/missed/refused/other, `given` reduces stock, corrections append-only with reason and latest correction reflected in slot display | `src/lib/repo/repo.test.js`, `src/screens/Schedule.test.jsx`, e2e |
+| Inventory & stock | Append-only movement ledger and derived totals; inventory view, stock receipt, stock adjust/dispose screens | `src/lib/repo/repo.test.js`, `src/screens/Inventory.test.jsx`, `src/screens/StockReceipt.test.jsx`, `src/screens/StockAdjust.test.jsx`, e2e |
+| Care operations (local tracking) | Patient profile, members, purchases (+details/status), transfers, notifications, notification preferences, sync status, audit history screens/repos | screen/repo tests (including `Purchases`, `Transfers`, `Members`, `Notifications`, `PatientProfile`, `MoreScreens`, etc.), e2e |
+| Local DB & sync-readiness | Plan/app IndexedDB schema, sync envelope fields, `syncQueue`, append-only ledger guards, cipher boundary and device key helpers | `src/lib/db/db.test.js` |
+| Security hardening (app-level) | CSP/referrer meta, device AES-GCM key storage, sealed payload envelope and `secureFetch` helpers (in-app unseal/redaction); sync status communicates sealed transport intent | `src/lib/db/db.test.js`, `src/screens/MoreScreens.test.jsx`, e2e sync copy check |
 | PWA | Manifest, icons, service worker, offline shell, runtime caching | `src/pwa/manifest.test.js`, build |
-| Design system | 4 swappable color variants, runtime switching | `src/styles/themes.test.js` |
+| Design system | Semantic token-based themes (default/ocean/sage/dark), runtime switching | `src/styles/themes.test.js` |
 
-Gates: `npm run lint` clean · `npm test` 168 passing · `npm run build` succeeds.
+## Partial / caveats
 
-## Deliberately not built (yet)
+- **Backend + real sync:** no API server or sync engine; `syncQueue` is local-only. `secureFetch`/sealed-envelope utilities exist but are not yet wired to live backend calls.
+- **Security limits:** app-level encryption/sealing protects local boundaries and intended transport contract, but browser DevTools/runtime can still expose data on a controlled client; true wire secrecy requires HTTPS and server-side end-to-end sealing/decryption.
+- **Spec parity not fully proven:** UI parity against all 26 `Project_Plan/Design.html` screens/states and full SRS behavioral coverage (permissions/invites enforcement, verified server recovery, notification delivery/scheduling, complete audit semantics, and ledger-correct purchase/transfer state transitions in every case) is not exhaustively verified.
+- **CSP/connectivity:** `connect-src 'self'` and current CSP in `index.html` must be updated when integrating external API origins.
 
-The SRS describes 26 screens and a server backend. This build delivers the core
-standalone loop (auth → plans → dashboard → medicines → schedule/dose →
-settings). Not implemented, in rough priority order:
+## Not implemented (yet)
 
-1. **Backend + real sync** — there is no API server yet; `syncQueue` accumulates
-   events but nothing pushes them. The client contract is fixed in
-   `docs/API_CONTRACT.md`; the seam is `src/lib/db/records.js` +
-   `syncQueue`. No fake network calls are made — the app is honest about being
-   local-only.
-2. **Members & permissions UI** — roles/permissions exist in the data model
-   (`members` store) but there is no invite/manage screen.
-3. **Inventory screen** (per-location breakdown view), **purchases**,
-   **transfers**, **notifications**, **audit history**, **account recovery** —
-   data model and repo patterns exist; screens do not.
-4. **Cloud auth** — local device profiles replace server identity (documented in
-   `docs/LOCAL_DATABASE.md` §9 and on the login screen).
-5. **Background sync worker** — the service worker precaches but does not yet
-   run a sync engine.
+1. **Backend service + authenticated API + sync push/pull/conflict resolution** (authoritative permissions, stock, audit, identity).
+2. **Cloud auth and verified recovery/ownership flows** (current auth is local device profiles).
+3. **Full members/permissions/invitation management** with server-enforced authorization.
+4. **Background sync worker** and production sync orchestration.
+5. **Exhaustive SRS/design-state parity** and any behavior requiring server authority or platform capabilities beyond current local implementation.
 
-Each remaining item follows the same spec-first workflow (`/feature`) and lands
-on the same quality gates — nothing above is a prototype; it is the verified
-core of the system.
+## Notes
 
-## What "production-ready" means here
-
-- Standalone single-device deployment: yes — installable PWA, offline-complete,
-  tested core flows.
-- Multi-device shared care with server authority: requires the backend work in
-  items 1–2 above. The local model is architected so that work is additive
-  (sync envelope, event log, conflict surfacing), not a rewrite.
-- Medical safety rules (no prescribing, append-only corrections, server-side
-  permission checks) are enforced in the local layer now and move to the server
-  when it exists — never dropped.
+- Medical-safety rules in scope of the local implementation (manual instructions, append-only corrections, `given` drives consumption, no prescribing) are preserved; server-authoritative enforcement moves to backend when it exists.
+- This document reflects current repo behavior; defer to code/tests/CI for exact verification status.

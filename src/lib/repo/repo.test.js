@@ -151,6 +151,8 @@ describe('dose recording', () => {
     const history = await listDoseHistory(db)
     const forSlot = history.filter((r) => r.slotId === slots[0].id)
     expect(forSlot).toHaveLength(2)
+    const refreshed = await listSlots(db, { medicines: [medicine], patient })
+    expect(refreshed[0].outcome).toBe('given')
     const stock = await stockByMedicine(db)
     expect(stock.get(medicine.id).total).toBe(-1)
   })

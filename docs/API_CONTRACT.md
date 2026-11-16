@@ -1,60 +1,34 @@
-# API Contract (initial)
+﻿# API Contract (initial)
 
-The backend (ASP.NET Core Web API, separate repo) exposes a versioned REST API
-over HTTPS. This document fixes the client-facing conventions; endpoint details
-are finalized with the backend and mirrored from the SRS API Documentation.
+Client-facing conventions for the planned backend (ASP.NET Core Web API, separate repo). Finalize and mirror with backend/SRS API documentation.
 
 ---
 
 ## Conventions
 
-- **Transport:** HTTPS only (SR-03). Base path `/api/v1`.
-- **Format:** JSON, camelCase. Dates ISO-8601 UTC; clients render local time.
-- **Auth:** Bearer token per user session; re-authentication for sensitive
-  operations (SR-11).
-- **Errors:** RFC 7807 `application/problem+json` with `code`, `message`,
-  `details`. Failed logins never reveal whether an account exists (SRS login
-  screen rule).
-- **Permissions:** every protected endpoint enforces the caller's plan-scoped
-  permissions server-side (SR-02/08); the UI permission set is a mirror, never
-  the authority.
-- **Isolation:** plan context comes from the URL (`/plans/{planId}/…`); cross-plan
-  access is denied (SR-07).
+- **Transport:** HTTPS only. Base path `/api/v1`.
+- **Format:** JSON, camelCase. Dates ISO-8601 UTC.
+- **Auth:** bearer token per user session; re-auth for sensitive operations. Failed auth must not reveal account existence.
+- **Errors:** RFC 7807 `application/problem+json`.
+- **Authorization:** server-enforced per plan/operation (client checks are UX only). Plan-scoped URLs (`/plans/{planId}/...`).
+- **Isolation:** no cross-plan data access.
 
-## Endpoint groups
+## Endpoint groups (planned)
 
-| Group | Endpoints (shape) | Permission |
-| --- | --- | --- |
-| Auth | `POST /auth/register`, `POST /auth/login`, `POST /auth/recover`, `POST /auth/reset` | public (rate-limited) |
-| Plans | `GET/POST /plans`, `GET/PATCH /plans/{id}` | owner/admin per action |
-| Members | `GET/POST /plans/{id}/members`, `PATCH/DELETE /plans/{id}/members/{userId}`, `POST /plans/{id}/ownership-recovery` | owner; recovery is a verified process (FR-06) |
-| Patient | `GET/PATCH /plans/{id}/patient` | view/edit per permissions |
-| Medicines | `GET/POST /plans/{id}/medicines`, `PATCH …/{medId}`, deactivate | edit per permissions; every change audited |
-| Schedules | `GET/POST/PATCH /plans/{id}/medicines/{medId}/schedule` | edit per permissions |
-| Dose records | `GET /plans/{id}/doses?date=…`, `POST /plans/{id}/doses/{doseId}/outcomes`, `POST …/corrections` | caregivers record outcomes; corrections append-only |
-| Inventory | `GET /plans/{id}/inventory` (per location + total), `POST …/movements` (receipt/adjustment/discard) | edit per permissions; adjustments need reason |
-| Purchases | `GET/POST /plans/{id}/purchases`, `PATCH …/{purchaseId}` (status) | edit per permissions |
-| Transfers | `GET/POST /plans/{id}/transfers`, `PATCH …/{transferId}` (status) | edit per permissions |
-| Notifications | `GET /plans/{id}/notifications`, `PATCH /notifications/{id}/read` | per-recipient |
-| Sync | `POST /plans/{id}/sync/events` (batch push), `GET /plans/{id}/sync/changes?since=…` (pull) | member with offline authorization |
-| Audit | `GET /plans/{id}/audit?entity=…` | owner/admin |
+Auth, Plans, Members, Patient, Medicines, Schedules, Dose records, Inventory/stock movements, Purchases, Transfers, Notifications, Sync, Audit. Exact request/response schemas to be aligned with implementation.
 
-## Sync contract (client-visible behavior)
+## Sync contract
 
-1. **Push:** the client batches queued offline events; each carries
-   `eventId` (UUID), `type`, `payload`, `recordedBy`, `eventTime`. The server
-   dedupes by `eventId` — a resubmitted batch returns the same result as the
-   first (FR-80). Response is per-event: `accepted | duplicate | conflict`.
-2. **Conflict:** `conflict` returns the conflicting server state and a
-   `conflictId`; the client surfaces it for authorized review and never applies
-   it silently (FR-81/82).
-3. **Pull:** the client fetches changes since its last sync cursor; the server
-   response is authoritative (FR-83).
-4. **Arrival time ≠ event time:** both are stored and returned (FR-79).
+1. **Push:** client batches queued events with `eventId`, `type`, `payload`, `recordedBy`, `eventTime`. Server dedupes by `eventId` (retries safe). Per-event result: `accepted | duplicate | conflict`.
+2. **Conflict:** return conflicting server state/conflict identifier; client surfaces for authorized review, never applies silently.
+3. **Pull:** changes since cursor; server response authoritative.
+4. **Timing:** preserve `eventTime` and server `arrivalTime`.
+
+## Security/sealed transport (recommended alignment)
+
+- Client includes device-key sealed envelope helpers (`src/lib/security/*`) intended for in-app unsealing and redacted handling. For real confidentiality/integrity in transit, backend must support compatible end-to-end sealing (or equivalent) over HTTPS and enforce authentication/authorization.
+- Do not rely on client-only measures for secrecy; controlled clients/browsers can inspect runtime and network tooling.
 
 ## Versioning
 
-- Additive changes (new optional fields, new endpoints) stay within `/api/v1`.
-- Breaking changes bump to `/api/v2`; clients pin the version they support.
-- The client API adapter (`src/lib/api/`) is the only place that knows the base
-  version — features never hardcode URLs.
+- Additive changes within `/api/v1`; breaking changes require a new major version. Keep base version/URL knowledge in a single client adapter.

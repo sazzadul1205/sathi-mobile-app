@@ -1,114 +1,66 @@
-# Architecture — Sathi Care Coordination PWA
+﻿# Architecture — Sathi Care Coordination PWA
 
-System architecture of the application. For the *development process*
-infrastructure (agents, gates, workflows) see `AI_DEVELOPMENT_INFRASTRUCTURE.md`.
-For the concrete implemented scope (standalone vs. pending), see `FRONTEND_STATUS.md`.
+System architecture for the frontend PWA. For development-process infrastructure see `AI_DEVELOPMENT_INFRASTRUCTURE.md`. For implemented scope and caveats see `FRONTEND_STATUS.md`.
 
 ---
 
 ## 1. System context
 
-```
-┌────────────────────┐      HTTPS REST       ┌─────────────────────┐
-│  Sathi PWA (React) │ ◄──────────────────► │  Backend API        │
-│  - online-first UI │   JSON, versioned     │  (ASP.NET Core,     │
-│  - offline capture │   + idempotency keys  │   separate repo)    │
-│  - queued sync     │                       │  - auth/identity    │
-└─────────┬──────────┘                       │  - permissions      │
-          │                                   │  - business rules   │
-          ▼                                   │  - audit + sync     │
-   IndexedDB (encrypted sensitive fields)     └──────────┬──────────┘
-   per care plan, per device                             ▼
-                                                   SQL Server
-```
+- **Frontend (this repo):** React + Vite PWA, local-first (IndexedDB), offline-capable UI, sync-ready record envelope/queue.
+- **Backend (planned, separate):** ASP.NET Core Web API + SQL Server (auth, permissions, business rules, audit, sync/conflict authority).
+- **Contract:** versioned REST JSON (`/api/v1`) with idempotent sync events (see `API_CONTRACT.md`).
 
-The backend is the **authoritative shared record**; the PWA is an offline-capable
-client. The frontend must never be the sole authority for permissions, inventory
-calculations, or record integrity (SRS §8 warning).
+The backend is intended to be the authoritative shared record; the client must not be the sole authority for permissions, inventory integrity, or shared-record state.
 
-## 2. Frontend layers
+## 2. Frontend layers (current)
 
 ```
 src/
-  app/          App shell: router, providers, nav (5-tab), sync strip, guards
-  features/     One folder per SRS domain: auth, plans, patient, members,
-                medicines, schedule, doses, inventory, purchases, transfers,
-                notifications, settings
-  components/   Shared UI kit built on the design tokens (cards, status pills,
-                dose rows, forms, outcome grid, …)
-  lib/          Adapters and cross-cutting logic:
-                  api/      typed REST client (fetch + timeout + auth header)
-                  db/       local-first IndexedDB model (standalone offline,
-                            sync-ready — see docs/LOCAL_DATABASE.md)
-                  sync/     outbound queue + sync engine + conflict surfacing
-                  auth/     session, re-auth for sensitive ops
-                  secure/   encryption helpers for local cache
-  styles/       Modular color-token system (themes/*.css, see README)
-  test/         Vitest setup (jest-dom matchers, RTL cleanup)
+  app/          Router, session/plan guards, shell/navigation
+  screens/      Route-level screens (auth, plans, dashboard, meds, schedule,
+                patient, members, inventory/receipt/adjust, purchases, transfers,
+                notifications, preferences, sync, audit, settings)
+  components/   Shared UI kit (semantic design tokens only)
+  store/        Zustand stores (session, plan context, medicines, members)
+  lib/
+    db/         IndexedDB schema/client/records/cipher/deviceKey
+    repo/       Domain repositories (app/plan/medicines/schedule/inventory/
+                members/purchases/transfers/notifications)
+    security/   Sealed payload envelope + secureFetch helpers
+  pwa/          Manifest source of truth
+  styles/       Token themes + Tailwind mapping
+  test/         Vitest setup/helpers
+e2e/            Playwright specs/helpers
 ```
 
-Dependency rule: `app → features → lib` only. Features never import other
-features directly; shared UI lives in `components/`.
+Intended dependency direction: `app → screens/features → lib`; shared UI in `components/`. Feature code should use `lib` adapters rather than ad-hoc network/storage access.
 
-## 3. Online data flow
+## 3. Local-first data flow (current)
 
-1. User action → feature → `lib/api` client → backend (permission checked
-   server-side).
-2. Response → update local caches (IndexedDB) + UI state.
-3. Audit-relevant actions render from the server response, never optimistic-only.
+1. **Read:** serve authorized/local data from IndexedDB.
+2. **Write:** create/update records via repositories with sync-ready envelope fields (`eventId`, `eventTime`, `syncState`, etc.). Care-critical ledgers (`doseRecords`, `stockMovements`, `auditLog`) are append-oriented with guarded semantics.
+3. **Queue:** outbound events accumulate in `syncQueue` (no backend push yet).
+4. **Sync (future):** batch push keyed by `eventId`, server dedupe/authority, conflict surfacing for review. Offline auth expiry/revocation semantics per SRS.
+5. **UI:** reflects local authoritative state (e.g. latest correction shown for a dose slot) and pending/sync indicators where implemented.
 
-## 4. Offline data flow
+## 4. PWA runtime
 
-1. **Read:** previously synced, authorized data is served from IndexedDB without
-   waiting on the network (NFR-06).
-2. **Write:** permitted operations (dose outcomes, supported stock changes,
-   transfers) create an **immutable local event**:
+- `vite-plugin-pwa` (`generateSW`, `registerType: 'autoUpdate'`), precache shell/assets/icons/manifest, navigate fallback `/index.html`.
+- Runtime caching: CacheFirst for images/fonts.
+- `index.html` includes PWA/meta tags, referrer policy, and CSP. E2E runs block service workers for determinism.
 
-   - unique event ID (client-generated UUID)
-   - recording user + event time (separate from server arrival time, FR-79)
-   - sync status: pending / in-flight / synced / conflict
+## 5. Security boundary (current)
 
-3. **Queue:** events wait in the outbound queue; UI shows pending count and last
-   successful sync (FR-71).
-4. **Sync on reconnect:** events are pushed with their IDs; the backend dedupes
-   by ID so retries never duplicate (FR-80). The server response is authoritative;
-   conflicts (same dose recorded by two caregivers, competing inventory changes)
-   are flagged for authorized review, never silently overwritten (FR-81/82).
-5. **Revocation:** access changes apply when the device reconnects; the app states
-   this honestly (FR-75).
+- **At-rest/app boundary:** plan-scoped local storage, device key + AES-GCM cipher helpers, sealed envelope utilities, redacted secure fetch behavior.
+- **Not complete:** helpers not wired into live backend transport; no server-side sealing/authz; browser/DevTools on a controlled client can still observe runtime/network data. CSP/connect-src must be adjusted for real API origins.
 
-Offline authorization for sensitive operations expires 24 h after the last online
-authorization (FR-73/74).
+## 6. Cross-cutting rules
 
-## 5. PWA runtime
-
-- **Strategy:** `generateSW` (vite-plugin-pwa), `registerType: 'autoUpdate'`.
-- **Precaching:** all build assets + icons + manifest.
-- **Runtime caching:** CacheFirst for images (30 d) and fonts (1 y).
-- **Update UX:** new precache manifest = new release; auto-update keeps users on
-  the latest shell without prompting.
-- **Capabilities:** notifications/reminders work only as far as the browser/OS
-  allows; the app says so clearly (NFR-14).
-
-## 6. Backend contract (boundary)
-
-- REST over HTTPS only; JSON, camelCase.
-- Permission matrix enforced per endpoint (SR-02) — the same permission set the
-  UI mirrors.
-- Sync endpoints accept batches of client events with idempotency keys and
-  return per-event results (accepted / duplicate / conflict).
-- Audit records written server-side for all protected mutations (SR-09/10).
-- Versioning: additive within a major version; breaking changes bump the API
-  version (see `API_CONTRACT.md`).
-
-## 7. Cross-cutting rules
-
-| Rule | Where enforced |
+| Rule | Enforcement (current intent) |
 | --- | --- |
-| One care plan = one patient | data model + backend |
-| "Given" is the only stock-reducing outcome | backend + client validator |
-| Purchases add stock only on receipt | backend |
-| Transfers never change totals; carried stock stays in total | backend |
-| Low-stock threshold flags + notifies | backend + UI surfaces |
-| Corrections are append-only | data model + audit log |
-| No prescribing/diagnosis anywhere | UI copy + review rule |
+| Manual instructions only; no prescribing/diagnosis | UI/repo conventions, review rules |
+| `given` is the only stock-reducing dose outcome | schedule/inventory repo logic + tests |
+| Corrections append-only with reason; latest correction reflected in display | schedule repo/screen logic + tests |
+| Append-only ledgers / no silent overwrite of care history | DB guards/records model |
+| Tokens only for styling (no hardcoded hex in components) | design system + theme contract tests |
+| Server enforces permissions/stock/shared integrity (when present) | future backend; client is UX mirror only |

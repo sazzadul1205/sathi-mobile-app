@@ -1,7 +1,6 @@
-# Testing Strategy
+﻿# Testing Strategy
 
-Every gate is automated; nothing ships on manual checks alone. Tests are the
-bridge between the SRS acceptance criteria and the code.
+Every gate is automated where practical. Tests bridge SRS acceptance criteria and implemented local behavior.
 
 ---
 
@@ -9,49 +8,34 @@ bridge between the SRS acceptance criteria and the code.
 
 | Layer | Location | Scope |
 | --- | --- | --- |
-| Token-contract | `src/styles/themes.test.js` | every color variant defines the full token contract |
-| PWA manifest & assets | `src/pwa/manifest.test.js` | manifest fields + PNG signature/dimensions of every icon |
-| Component | `src/**/*.test.jsx` (Vitest + Testing Library, jsdom) | render + interaction smoke tests per screen/feature |
-| End-to-end | `e2e/*.spec.js` (Playwright + Chromium) | full care flow, every route renders, routing guards, session persistence |
-| Sync engine (planned) | `src/lib/sync/*.test.js` | queue append, dedup by event ID, conflict surfacing |
-| API integration (backend repo) | backend test project | permission matrix, stock math, sync endpoint behavior |
+| Theme contract | `src/styles/themes.test.js` | every color variant defines the full token contract |
+| PWA manifest & assets | `src/pwa/manifest.test.js` | manifest fields + PNG signature/dimensions of icons |
+| Local DB & crypto boundary | `src/lib/db/db.test.js` | schema/isolation, sync envelope, ledger guards, queue, cipher/device-key behavior |
+| Repositories/domain logic | `src/lib/repo/repo.test.js` (+ other repo tests as added) | plan/medicine/schedule/stock rules, append-only behavior, derived totals |
+| Component/screen | `src/screens/*.test.jsx`, `src/app/App.test.jsx` | render + interaction behavior against real repos on fake-indexeddb |
+| End-to-end | `e2e/*.spec.js` (Playwright + Chromium) | routing guards, core care flow, route rendering, persistence/recovery, key security/sync UI assertions |
 
-## SRS → test mapping
+## Coverage highlights (current)
 
-Each SRS §11 acceptance criterion maps to at least one automated test before the
-feature is considered done:
-
-| Acceptance criterion | Test (planned location) |
-| --- | --- |
-| Care plan access | component + API integration |
-| Scheduling | component + API integration |
-| Dose recording | component + sync tests (offline → queued → sync) |
-| Inventory update (`given` vs `missed`) | sync/API tests |
-| Stock transfer | sync/API tests |
-| Purchase tracking | component + API integration |
-| Low-stock alerts | component + API integration |
-| Audit history | API integration (audit rows) |
-| Offline operation | sync engine tests (jsdom + fake IndexedDB) |
-| Sync integrity | sync engine tests (replay, conflicts) |
-| Security | API integration (direct endpoint calls) |
-| PWA install/offline | manifest tests + build artifacts + manual device pass |
+- Core: auth/login, plan selection/creation, dashboard, medicines CRUD, schedule recording/correction.
+- Added care-management screens: account recovery, patient profile, members, inventory, stock receipt/adjust, purchases/details, transfers, notifications/preferences, sync status, audit history.
+- Medicine scheduling: dynamic times with per-dose quantity and meal timing; schedule corrections surface latest outcome.
+- Sync/security: sync queue/local envelope behavior, cipher/device-key helpers, sync status messaging (sealed transport intent).
 
 ## Running tests
 
 - `npm test` — full Vitest suite once (used by pre-push hook and CI).
-- `npm run test:watch` — Vitest watch mode while developing.
-- `npm run test:e2e` — Playwright end-to-end suite. Starts its own Vite dev
-  server on a dedicated port (`5199`, strict, never reused) and drives Chromium;
-  service workers are blocked so runs stay deterministic. Requires
-  `npx playwright install chromium` once.
-- `npm run test:e2e:ui` — Playwright UI runner for stepping through e2e specs.
-- A failing test blocks `git push` and fails CI; there is no merge path around it.
+- `npm run test:watch` — Vitest watch mode.
+- `npm run test:e2e` — Playwright e2e suite (dedicated dev server on port `5199`, strict/no reuse; service workers blocked). Requires `npx playwright install chromium` once.
+- `npm run test:e2e:ui` — Playwright UI runner.
+- `npm run lint` — ESLint; `npm run build` — production/PWA build verification.
 
-## Writing tests (rules)
+A failing required gate should block push/merge (pre-push hook runs lint+test; CI runs lint/test/build and e2e).
 
-- Prefer behavior over implementation: query by role/label, assert outcomes.
-- Offline/sync tests must prove: no duplicates on replay, conflicts are flagged
-  (not applied), event time is preserved.
-- Never assert against `dist/` output; assert against source-level contracts.
-- Component tests render through the real token system (no color literals in
-  assertions).
+## Writing/updating tests (rules)
+
+- Trace tests to SRS IDs/behavior where applicable; prefer behavior over implementation.
+- Prove care/sync invariants: no duplicate replay semantics, append-only corrections, conflicts flagged (not silently applied), event time preserved, `given`-only stock consumption.
+- Keep tests aligned with current data shapes/contracts (e.g. per-dose time objects `{ time, quantity, mealRelation }`).
+- Render through real providers/repos/theme where relevant; avoid asserting against `dist/`.
+- Update e2e selectors/flows when routes, labels, or user interactions change.

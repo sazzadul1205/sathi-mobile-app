@@ -1,188 +1,65 @@
-# Local Database Model (IndexedDB)
+﻿# Local Database Model (IndexedDB)
 
-Design of the standalone offline store. The app runs **fully without a network**
-today (local-first), while every record is shaped so a future server backend can
-sync without data migration. Companion docs: `DATA_MODEL.md` (entities/relations),
-`API_CONTRACT.md` (sync endpoints), `ARCHITECTURE.md` (layering).
+Design of the standalone offline store. The app runs local-first today; records are shaped so a future server backend can sync without redesign. See `DATA_MODEL.md`, `API_CONTRACT.md`, `ARCHITECTURE.md`, `FRONTEND_STATUS.md`.
 
 ---
 
 ## 1. Goals & constraints
 
-| Goal | Source |
+- Standalone offline operation; sync-ready for future backend.
+- Per-plan isolation (SR-07/BR-01); append-only care ledgers; no silent overwrites.
+- Idempotent events (`eventId`, FR-80), event vs arrival time (FR-79), conflicts surfaced not discarded (FR-81/82).
+- Sensitive data protection at rest/in-app boundaries where implemented (SR-05); offline auth expiry (FR-73).
+
+## 2. Database layout
+
+- **`sathi-app` (device-wide):** `plans`, `users` (no credentials), `session` (`current`, offline auth expiry), `meta`, `keys`.
+- **`sathi-plan-<planId>` (per plan):** `patient`, `locations`, `members`, `medicines`, `schedules`, `doseRecords`, `inventory`, `stockMovements`, `purchases`, `transfers`, `notifications`, `auditLog`, `syncQueue`.
+
+One DB per plan enables isolation and full local wipe on plan removal/revocation.
+
+## 3. Stores and ledgers
+
+Plan stores follow the SRS/data-model entities (see `schema.js` for key paths/indexes). **Ledger stores:** `doseRecords`, `stockMovements`, `auditLog` are append-oriented; `assertAppendable`/record helpers guard immutable event identity. Corrections are new rows referencing originals.
+
+**Medicine/schedule data:** medicine `times` are normalized per-dose objects `{ time, quantity, mealRelation }` (legacy string/time forms supported in parsing). Dose slots/records persist per-dose `doseQuantity` and `mealRelation`; schedule display reflects the latest correction outcome.
+
+## 4. Sync-readiness envelope
+
+Plan-scoped records/events carry fields such as `id`, `eventId`, `planId`, `recordedBy`, `createdAt`, `updatedAt`, `eventTime`, `arrivalTime`, `syncState`, `serverId`, `revision` (see `src/lib/db/records.js`). `syncQueue` is keyed by `eventId`. Today records may remain pending locally; future sync pushes batches and applies authoritative server results/conflicts.
+
+## 5. Encryption and secure transport helpers
+
+- `src/lib/db/cipher.js`: `identityCipher` and AES-GCM-256 cipher (WebCrypto) for encrypt/decrypt of values/payloads.
+- `src/lib/db/deviceKey.js`: non-extractable device key stored in app DB `keys` (`device-encryption-key`) when available; device cipher factory.
+- `src/lib/security/secureEnvelope.js`: sealed envelope format `{ __sealed: true, v: 1, alg, iv, data }` (base64) with `sealPayload`/`openPayload`/`isSealedEnvelope`/`redactError`.
+- `src/lib/security/secureFetch.js`: seals request bodies, sanitizes sensitive headers, enforces/redacts sealed responses by default, returns decrypted payloads in-app.
+
+**Limits:** not yet wired into repositories/sync network flows; without backend cooperation this does not provide end-to-end wire secrecy. Browser runtime/DevTools on a controlled client can still observe data.
+
+## 6. Threat model (honest)
+
+| Helps against | Does not fully protect against |
 | --- | --- |
-| Standalone offline operation — no backend required | current requirement |
-| Server-first long term; sync when the backend exists | SRS §5, `API_CONTRACT.md` |
-| Per-plan isolation on the device | SR-07, BR-01 |
-| Append-only care records; no silent overwrites | FR-26/41, BR-09/12 |
-| Offline events never duplicate on resubmit | FR-80 |
-| Event time ≠ arrival time | FR-79 |
-| Conflicts flagged, never discarded | FR-81/82 |
-| Sensitive data encrypted at rest | SR-05 |
-| Offline authorization expires after 24 h | FR-73 |
+| Casual storage inspection/shared-profile access, accidental plaintext handling in covered paths | Fully compromised device/browser, DevTools/runtime inspection, malware/root access, server-side breaches |
+| Local data isolation by plan DB and app-level envelope handling | Lack of backend authz/encryption if/when networked |
 
-Technology: **IndexedDB** (per SRS §8 "Offline data"). Implementation:
-`src/lib/db/` — zero runtime dependencies, raw IndexedDB wrappers.
+## 7. Migrations & versioning
 
-## 2. Two-tier database layout
+`SCHEMA_VERSION` and migrations live in `src/lib/db/schema.js` (additive evolution preferred). Do not rewrite ledger history via migrations.
 
-```
-IndexedDB origin
-├── sathi-app                     device-wide (not plan-scoped)
-│     plans[]                     plan registry: id, name, patientName, role,
-│                                 updatedAt        (plan-selector cache, SR-07)
-│     users[]                     local profile cache (id, name, email)
-│                                 NEVER credentials (SR-06)
-│     session{ id: 'current' }    current user + offlineAuthExpiresAt (FR-73)
-│     meta{ key → value }         schema version, lastSyncCursor per plan
-│     keys{ id }                  device CryptoKeys (non-extractable, SR-05)
-│
-├── sathi-plan-<planId>           one DB per care plan (delete = SR-13 wipe)
-│     patient                     singleton profile (BR-01)
-│     locations[]                 user-defined locations (SRS §12.6)
-│     members[]                   roles + permissions (CarePlanMember)
-│     medicines[]
-│     schedules[]
-│     doseRecords[]               APPEND-ONLY ledger
-│     inventory[]                 current stock per medicine+location
-│     stockMovements[]            APPEND-ONLY ledger
-│     purchases[]
-│     transfers[]
-│     notifications[]
-│     auditLog[]                  APPEND-ONLY (SR-09/10)
-│     syncQueue[]                 keyed by eventId — outbound offline events
-└── sathi-plan-<otherId> …        siblings never imported into each other
-```
-
-**Why one DB per plan:** physical isolation (SR-07) — a bug or an index scan
-cannot leak rows across plans, and plan removal/revocation is a single
-`deleteDatabase` (SR-13) that cannot touch siblings.
-
-## 3. Store catalog (plan DB)
-
-| Store | keyPath | Indexes | Notes |
-| --- | --- | --- | --- |
-| `patient` | `id` | — | one row per plan; care notes stored **encrypted** |
-| `locations` | `id` | `name` | |
-| `members` | `id` | `userId`, `role` | |
-| `medicines` | `id` | `name`, `active`, `updatedAt` | different strengths = separate rows (FR-15) |
-| `schedules` | `id` | `medicineId`, `startAt` | derived from manual prescription (BR-04) |
-| `doseRecords` | `id` | `medicineId`, `scheduledFor`, `outcome`, `syncState`, unique `eventId` | append-only; corrections are new rows referencing the original (FR-26) |
-| `inventory` | `id` | `medicineId`, `locationId` | derived view; the ledger is authoritative |
-| `stockMovements` | `id` | `medicineId`, `locationId`, `createdAt`, `syncState`, unique `eventId` | append-only ledger (FR-41/42) |
-| `purchases` | `id` | `medicineId`, `status`, `syncState` | stock increases only on receipt (BR-06) |
-| `transfers` | `id` | `medicineId`, `status`, `syncState` | never consumption (FR-59) |
-| `notifications` | `id` | `createdAt`, `read` | |
-| `auditLog` | `id` | `entityType`, `entityId`, `createdAt` | append-only; never client-modifiable |
-| `syncQueue` | `eventId` | `syncState`, `createdAt` | mirrors `SyncRecord`; dedup key |
-
-App-DB stores: `plans(id)`, `users(id + email)`, `session(id)`, `meta(key)`,
-`keys(id)` — see `src/lib/db/schema.js` (single declarative source, validated by
-`src/lib/db/db.test.js`).
-
-## 4. Sync-readiness contract (every plan-scoped record)
-
-```ts
-type Envelope = {
-  id: string            // local UUID, primary key
-  eventId: string       // immutable idempotency key; server dedupes by this (FR-80)
-  planId: string        // denormalized guard against cross-plan reads/writes
-  recordedBy: string    // account attribution (SR-09/10)
-  createdAt: string     // local creation clock
-  updatedAt: string     // local mutation clock
-  eventTime: string     // when it actually happened (client) — never overwritten
-  arrivalTime: string | null  // server receipt time (FR-79); null until synced
-  syncState: 'pending' | 'synced' | 'conflict'
-  serverId: string | null     // server PK after acceptance
-  revision: number            // optimistic-concurrency counter
-}
-```
-
-- **Standalone today:** `syncState` stays `pending`; nothing ever blocks on the
-  network. `syncQueue` accumulates offline events.
-- **With backend later:** the client pushes `syncQueue` batches keyed by
-  `eventId`; the server returns `accepted | duplicate | conflict` per event
-  (`API_CONTRACT.md` §Sync contract). `markSynced` records `serverId` +
-  `arrivalTime`; `markConflict` stores the conflict payload verbatim on the
-  record for authorized review. No local record is ever rewritten by a sync
-  result — only sync metadata changes.
-
-## 5. Ledger immutability (enforced in code)
-
-`LEDGER_STORES = ['doseRecords', 'stockMovements', 'auditLog']`:
-
-- Writes go through `createRecord()` (always a **new** `eventId`).
-- `assertAppendable()` rejects a second write of an existing `eventId`.
-- Only `markSynced` / `markConflict` may mutate a ledger row — sync metadata
-  only; clinical content is never touched.
-- Corrections (FR-26/27) are new rows referencing the original `id` — the
-  original stays intact.
-
-## 6. Encryption boundary (SR-05)
-
-`src/lib/db/cipher.js` defines one interface, two implementations:
-
-- `identityCipher` — pass-through, for development and tests.
-- `createAesGcmCipher({ getKey })` — AES-GCM-256 via WebCrypto; ciphertext
-  stored as `{ iv, data }` (structured-clone safe). The key is a non-extractable
-  `CryptoKey` in the app-DB `keys` store, generated on first run.
-
-Repositories encrypt **sensitive fields only** (patient care notes, dose notes)
-before `put`; everything else stays queryable in plaintext. Encrypting whole
-rows would break the indexes in §3, so the field-level boundary is deliberate.
-
-## 7. Threat model (honest scope)
-
-| Protected against | Not protected against |
-| --- | --- |
-| Casual inspection of device storage / shared-browser profile | An attacker with full device + browser control (devtools, malware) |
-| Copying the IndexedDB files without the app's key | Rooted device / OS-level backup extraction with key |
-| Accidental plaintext writes (cipher boundary is the only write path for sensitive fields) | Server-side breaches (backend responsibility, SR-04) |
-
-Local encryption is defense-in-depth; server-side rules remain the authority
-once sync exists.
-
-## 8. Migrations & versioning
-
-- `SCHEMA_VERSION` + `MIGRATIONS` registry in `schema.js`; the upgrade handler
-  applies every migration newer than the on-disk version.
-- v1 (current) creates all stores/indexes above.
-- Future versions are **additive**: new stores or new indexes. Existing data is
-  never rewritten by a migration; backfills happen through the sync/audit path,
-  not by mutating history.
-- `meta['schemaVersion']` records the applied version for diagnostics.
-
-## 9. Offline authorization (FR-73/74)
-
-`session.current.offlineAuthExpiresAt = lastOnlineAuth + 24 h`. The sync/auth
-adapter checks it before any sensitive offline write; expiry forces reconnect +
-re-auth. The UI states revocation is not immediate offline (FR-75) — honest UX,
-mirrored server-side when online.
-
-## 10. Mapping to the project documentation
-
-| Local store | DATA_MODEL entity | SRS |
-| --- | --- | --- |
-| `patient` | Patient | FR-10/11 |
-| `locations` | InventoryLocation | FR-36, §12.6 |
-| `members` | CarePlanMember | FR-03/04 |
-| `medicines`, `schedules` | Medicine, MedicationSchedule | FR-13–20 |
-| `doseRecords` | DoseRecord | FR-22–28 |
-| `inventory` + `stockMovements` | Inventory, StockMovement | FR-35–46 |
-| `purchases` | PurchaseRecord | FR-47–55 |
-| `transfers` | TransferRecord | FR-56–62 |
-| `notifications` | Notification | FR-63–67 |
-| `auditLog` | AuditLog | SR-09/10 |
-| `syncQueue` | SyncRecord | FR-77–83 |
-| `plans`, `users`, `session`, `meta`, `keys` | (device-local, no server entity) | SR-05/06/07, FR-71/73 |
-
-## 11. Source map
+## 8. Source map
 
 ```
 src/lib/db/
-  schema.js    store/index definitions + MIGRATIONS (declarative, testable)
-  client.js    open/upgrade/delete connections, transactions, collections
-  records.js   sync envelope, markSynced/markConflict, ledger guards
-  cipher.js    encryption boundary (identity | AES-GCM-256)
-  db.test.js   schema, isolation, envelope, ledger, queue, cipher tests
+  schema.js      stores/indexes/migrations
+  client.js      open/upgrade/delete, transactions/collections
+  records.js     envelope, sync metadata helpers, ledger guards
+  cipher.js      encryption boundary
+  deviceKey.js   device key + cipher access
+src/lib/security/
+  secureEnvelope.js
+  secureFetch.js
 ```
+
+Tests: `src/lib/db/db.test.js`, `src/lib/repo/repo.test.js`, and security-focused tests (as present).
