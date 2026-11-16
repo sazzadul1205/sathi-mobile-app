@@ -2,31 +2,43 @@
 // Create a care plan: one patient per plan (BR-01); creator becomes owner.
 // Every change is audited (FR-09).
 
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { ShieldCheck } from 'lucide-react'
-import { usePlans } from '../store/plan.js'
-import { useSession } from '../store/session.js'
-import { Button, Field, Select, ScreenHeader, TextArea, TextInput } from '../components/ui.jsx'
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { ShieldCheck } from "lucide-react";
+import { usePlans } from "../store/plan.js";
+import { useSession } from "../store/session.js";
+import {
+  Button,
+  Field,
+  Select,
+  ScreenHeader,
+  TextArea,
+  TextInput,
+} from "../components/ui.jsx";
 
-const LOCATION_OPTIONS = ['Dhaka', 'Cumilla', 'Outside these cities']
+const LOCATION_OPTIONS = ["Dhaka", "Cumilla", "Outside these cities"];
 
 export default function CreatePlan() {
-  const navigate = useNavigate()
-  const { createPlan } = usePlans()
-  const { profile } = useSession()
-  const [form, setForm] = useState({ name: '', patientName: '', location: 'Dhaka', notes: '' })
-  const [error, setError] = useState(null)
-  const [busy, setBusy] = useState(false)
+  const navigate = useNavigate();
+  const { createPlan } = usePlans();
+  const { profile } = useSession();
+  const [form, setForm] = useState({
+    name: "",
+    patientName: "",
+    location: "Dhaka",
+    notes: "",
+  });
+  const [error, setError] = useState(null);
+  const [busy, setBusy] = useState(false);
 
   async function handleSubmit(event) {
-    event.preventDefault()
+    event.preventDefault();
     if (!form.patientName.trim()) {
-      setError('Patient name is required')
-      return
+      setError("Patient name is required");
+      return;
     }
-    setBusy(true)
-    setError(null)
+    setBusy(true);
+    setError(null);
     try {
       await createPlan({
         name: form.name,
@@ -34,11 +46,11 @@ export default function CreatePlan() {
         notes: form.notes,
         location: form.location,
         ownerProfileId: profile.id,
-      })
-      navigate('/plan', { replace: true })
+      });
+      navigate("/plan", { replace: true });
     } catch (err) {
-      setError(String(err.message || err))
-      setBusy(false)
+      setError(String(err.message || err));
+      setBusy(false);
     }
   }
 
@@ -58,7 +70,9 @@ export default function CreatePlan() {
           <Field label="Patient name">
             <TextInput
               value={form.patientName}
-              onChange={(e) => setForm({ ...form, patientName: e.target.value })}
+              onChange={(e) =>
+                setForm({ ...form, patientName: e.target.value })
+              }
               placeholder="Full name"
               required
               autoFocus
@@ -87,13 +101,16 @@ export default function CreatePlan() {
           <div className="mb-4 flex items-start gap-2.5 rounded-md border border-line bg-card px-3.5 py-3">
             <ShieldCheck className="mt-0.5 size-4 flex-none text-brand" />
             <p className="text-xs leading-relaxed text-ink-2">
-              <b className="text-ink">You will be the owner.</b> You can invite family
-              members and caregivers after creating the plan. Patient data stays on
-              this device until care-coordination servers are connected.
+              <b className="text-ink">You will be the owner.</b> You can invite
+              family members and caregivers after creating the plan. Patient
+              data stays on this device until care-coordination servers are
+              connected.
             </p>
           </div>
 
-          {error ? <p className="mb-3 text-xs font-semibold text-missed">{error}</p> : null}
+          {error ? (
+            <p className="mb-3 text-xs font-semibold text-missed">{error}</p>
+          ) : null}
 
           <div className="flex gap-2.5">
             <Button
@@ -105,11 +122,11 @@ export default function CreatePlan() {
               Cancel
             </Button>
             <Button type="submit" disabled={busy}>
-              {busy ? 'Creating…' : 'Create plan'}
+              {busy ? "Creating…" : "Create plan"}
             </Button>
           </div>
         </form>
       </div>
     </div>
-  )
+  );
 }

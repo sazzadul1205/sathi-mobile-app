@@ -1,14 +1,17 @@
-// src/screens/Settings.test.jsx
-// Settings: profile + plan summary, theme switching, sign out, and deleting the
-// active plan (which wipes its local database).
-import 'fake-indexeddb/auto'
-import { beforeEach, describe, expect, it } from 'vitest'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import Settings from './Settings.jsx'
-import { usePlans } from '../store/plan.js'
-import { useSession } from '../store/session.js'
-import { resetAppDb, resetStores, seedPlan, signInStore } from '../test/seed.js'
+﻿import "fake-indexeddb/auto"
+import { beforeEach, describe, expect, it, vi } from "vitest"
+import { fireEvent, render, screen, waitFor } from "@testing-library/react"
+import { MemoryRouter, Route, Routes } from "react-router-dom"
+import Settings from "./Settings.jsx"
+import { usePlans } from "../store/plan.js"
+import { useSession } from "../store/session.js"
+import { resetAppDb, resetStores, seedPlan, signInStore } from "../test/seed.js"
+
+vi.mock("sweetalert2", () => ({
+  default: {
+    fire: vi.fn(async () => ({ isConfirmed: true })),
+  },
+}))
 
 beforeEach(async () => {
   await resetAppDb()
@@ -17,7 +20,7 @@ beforeEach(async () => {
 
 function renderSettings() {
   return render(
-    <MemoryRouter initialEntries={['/plan/settings']}>
+    <MemoryRouter initialEntries={["/plan/settings"]}>
       <Routes>
         <Route path="/plan/settings" element={<Settings />} />
         <Route path="/login" element={<div>login page</div>} />
@@ -27,12 +30,12 @@ function renderSettings() {
   )
 }
 
-describe('Settings', () => {
-  it('renders the profile, current plan and theme selector', async () => {
+describe("Settings", () => {
+  it("renders the profile, current plan and theme selector", async () => {
     const { profile, session, planId, planRecord, context, db } = await seedPlan()
     signInStore({ profile, session })
     usePlans.setState({
-      status: 'ready',
+      status: "ready",
       plans: [planRecord],
       currentPlanId: planId,
       context,
@@ -41,20 +44,20 @@ describe('Settings', () => {
 
     renderSettings()
 
-    expect(await screen.findByRole('heading', { name: 'Settings' })).toBeInTheDocument()
-    expect(screen.getAllByText('Rafiq Ahmed').length).toBeGreaterThan(0)
+    expect(await screen.findByRole("heading", { name: "Settings" })).toBeInTheDocument()
+    expect(screen.getAllByText("Rafiq Ahmed").length).toBeGreaterThan(0)
     expect(screen.getByText(/@example\.com/)).toBeInTheDocument()
-    expect(screen.getByText('Rahim Mia')).toBeInTheDocument()
-    expect(screen.getByLabelText('Theme')).toBeInTheDocument()
+    expect(screen.getByText("Rahim Mia")).toBeInTheDocument()
+    expect(screen.getByLabelText("Theme")).toBeInTheDocument()
 
     db.close()
   })
 
-  it('switches the active theme', async () => {
+  it("switches the active theme", async () => {
     const { profile, session, planId, planRecord, context, db } = await seedPlan()
     signInStore({ profile, session })
     usePlans.setState({
-      status: 'ready',
+      status: "ready",
       plans: [planRecord],
       currentPlanId: planId,
       context,
@@ -63,20 +66,20 @@ describe('Settings', () => {
 
     renderSettings()
 
-    const select = await screen.findByLabelText('Theme')
-    fireEvent.change(select, { target: { value: 'ocean' } })
+    const select = await screen.findByLabelText("Theme")
+    fireEvent.change(select, { target: { value: "ocean" } })
 
-    expect(document.documentElement.dataset.theme).toBe('ocean')
-    expect(localStorage.getItem('sathi-theme')).toBe('ocean')
+    expect(document.documentElement.dataset.theme).toBe("ocean")
+    expect(localStorage.getItem("sathi-theme")).toBe("ocean")
 
     db.close()
   })
 
-  it('signs out and returns to login', async () => {
+  it("signs out and returns to login", async () => {
     const { profile, session, planId, planRecord, context, db } = await seedPlan()
     signInStore({ profile, session })
     usePlans.setState({
-      status: 'ready',
+      status: "ready",
       plans: [planRecord],
       currentPlanId: planId,
       context,
@@ -85,19 +88,19 @@ describe('Settings', () => {
 
     renderSettings()
 
-    fireEvent.click(await screen.findByRole('button', { name: /sign out/i }))
+    fireEvent.click(await screen.findByRole("button", { name: /sign out/i }))
 
-    expect(await screen.findByText('login page')).toBeInTheDocument()
-    await waitFor(() => expect(useSession.getState().status).toBe('signed-out'))
+    expect(await screen.findByText("login page")).toBeInTheDocument()
+    await waitFor(() => expect(useSession.getState().status).toBe("signed-out"))
 
     db.close()
   })
 
-  it('deletes the active plan', async () => {
+  it("deletes the active plan via swal confirm", async () => {
     const { profile, session, planId, planRecord, context, db } = await seedPlan()
     signInStore({ profile, session })
     usePlans.setState({
-      status: 'ready',
+      status: "ready",
       plans: [planRecord],
       currentPlanId: planId,
       context,
@@ -107,10 +110,9 @@ describe('Settings', () => {
     renderSettings()
     db.close()
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Delete this plan' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Delete plan' }))
+    fireEvent.click(await screen.findByRole("button", { name: "Delete this plan" }))
 
-    expect(await screen.findByText('select page')).toBeInTheDocument()
+    expect(await screen.findByText("select page")).toBeInTheDocument()
     await waitFor(() => expect(usePlans.getState().currentPlanId).toBeNull())
   })
 })
