@@ -1,3 +1,4 @@
+/* stylelint-disable at-rule-no-unknown */
 /* Sathi design tokens — "sage" variant
  * Soft clinical green for a calmer care-focused feel.
  */
@@ -61,3 +62,4 @@
   --t-admin: #3355c4;
   --t-admin-soft: #eaf0ff;
 }
+/* stylelint-enable at-rule-no-unknown */
